@@ -88,6 +88,9 @@ private:
 	void _screen_input(const Ref<InputEvent> &p_event);
 	void _add_preset_pressed();
 	void _screen_pick_pressed();
+	void _focus_enter();
+	void _focus_exit();
+	void _html_focus_exit();
 
 protected:
 	void _notification(int);
@@ -117,6 +120,8 @@ class ColorPickerButton : public Button {
 	ColorPicker *picker;
 
 	void _color_changed(const Color &p_color);
+	void _modal_closed();
+
 	virtual void pressed();
 
 protected:

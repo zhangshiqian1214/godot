@@ -48,6 +48,20 @@ void TileMapEditor::_notification(int p_what) {
 
 		} break;
 
+		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
+
+			bool new_show_tile_info = EditorSettings::get_singleton()->get("editors/tile_map/show_tile_info_on_hover");
+			if (new_show_tile_info != show_tile_info) {
+				show_tile_info = new_show_tile_info;
+				tile_info->set_visible(show_tile_info);
+			}
+
+			if (is_visible_in_tree()) {
+				_update_palette();
+			}
+
+		} // fallthrough
+
 		case NOTIFICATION_ENTER_TREE: {
 
 			transp->set_icon(get_icon("Transpose", "EditorIcons"));
@@ -60,19 +74,14 @@ void TileMapEditor::_notification(int p_what) {
 
 			search_box->add_icon_override("right_icon", get_icon("Search", "EditorIcons"));
 
-		} break;
+			PopupMenu *p = options->get_popup();
+			p->set_item_icon(p->get_item_index(OPTION_PAINTING), get_icon("Edit", "EditorIcons"));
+			p->set_item_icon(p->get_item_index(OPTION_PICK_TILE), get_icon("ColorPick", "EditorIcons"));
+			p->set_item_icon(p->get_item_index(OPTION_SELECT), get_icon("ToolSelect", "EditorIcons"));
+			p->set_item_icon(p->get_item_index(OPTION_MOVE), get_icon("ToolMove", "EditorIcons"));
+			p->set_item_icon(p->get_item_index(OPTION_DUPLICATE), get_icon("Duplicate", "EditorIcons"));
+			p->set_item_icon(p->get_item_index(OPTION_ERASE_SELECTION), get_icon("Remove", "EditorIcons"));
 
-		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
-
-			bool new_show_tile_info = EditorSettings::get_singleton()->get("editors/tile_map/show_tile_info_on_hover");
-			if (new_show_tile_info != show_tile_info) {
-				show_tile_info = new_show_tile_info;
-				tile_info->set_visible(show_tile_info);
-			}
-
-			if (is_visible_in_tree()) {
-				_update_palette();
-			}
 		} break;
 	}
 }
@@ -138,6 +147,23 @@ void TileMapEditor::_menu_option(int p_option) {
 			copydata.clear();
 
 			canvas_item_editor->update();
+		} break;
+		case OPTION_FIX_INVALID: {
+
+			undo_redo->create_action(TTR("Fix Invalid Tiles"));
+			undo_redo->add_undo_method(node, "set", "tile_data", node->get("tile_data"));
+			node->fix_invalid_tiles();
+			undo_redo->add_do_method(node, "set", "tile_data", node->get("tile_data"));
+			undo_redo->commit_action();
+
+		} break;
+		case OPTION_MOVE: {
+
+			if (selection_active) {
+				_update_copydata();
+				tool = TOOL_MOVING;
+				canvas_item_editor->update();
+			}
 		} break;
 	}
 }
@@ -303,7 +329,7 @@ void TileMapEditor::_update_palette() {
 		if (tex.is_valid()) {
 			Rect2 region = tileset->tile_get_region(entries[i].id);
 
-			if (tileset->tile_get_is_autotile(entries[i].id)) {
+			if (tileset->tile_get_tile_mode(entries[i].id) == TileSet::AUTO_TILE) {
 				int spacing = tileset->autotile_get_spacing(entries[i].id);
 				region.size = tileset->autotile_get_size(entries[i].id);
 				region.position += (region.size + Vector2(spacing, spacing)) * tileset->autotile_get_icon_coordinate(entries[i].id);
@@ -506,7 +532,7 @@ void TileMapEditor::_draw_cell(int p_cell, const Point2i &p_point, bool p_flip_h
 	Vector2 tile_ofs = node->get_tileset()->tile_get_texture_offset(p_cell);
 
 	Rect2 r = node->get_tileset()->tile_get_region(p_cell);
-	if (node->get_tileset()->tile_get_is_autotile(p_cell)) {
+	if (node->get_tileset()->tile_get_tile_mode(p_cell) == TileSet::AUTO_TILE) {
 		int spacing = node->get_tileset()->autotile_get_spacing(p_cell);
 		r.size = node->get_tileset()->autotile_get_size(p_cell);
 		r.position += (r.size + Vector2(spacing, spacing)) * node->get_tileset()->autotile_get_icon_coordinate(p_cell);
@@ -698,7 +724,11 @@ bool TileMapEditor::forward_gui_input(const Ref<InputEvent> &p_event) {
 
 					if (mb->get_shift()) {
 
+#ifdef APPLE_STYLE_KEYS
+						if (mb->get_command())
+#else
 						if (mb->get_control())
+#endif
 							tool = TOOL_RECTANGLE_PAINT;
 						else
 							tool = TOOL_LINE_PAINT;
@@ -708,9 +738,11 @@ bool TileMapEditor::forward_gui_input(const Ref<InputEvent> &p_event) {
 
 						return true;
 					}
-
+#ifdef APPLE_STYLE_KEYS
+					if (mb->get_command()) {
+#else
 					if (mb->get_control()) {
-
+#endif
 						tool = TOOL_PICKING;
 						_pick_tile(over_tile);
 
@@ -812,6 +844,29 @@ bool TileMapEditor::forward_gui_input(const Ref<InputEvent> &p_event) {
 						copydata.clear();
 
 						canvas_item_editor->update();
+					} else if (tool == TOOL_MOVING) {
+
+						Point2 ofs = over_tile - rectangle.position;
+
+						undo_redo->create_action(TTR("Move"));
+						undo_redo->add_undo_method(node, "set", "tile_data", node->get("tile_data"));
+						for (int i = rectangle.position.y; i <= rectangle.position.y + rectangle.size.y; i++) {
+							for (int j = rectangle.position.x; j <= rectangle.position.x + rectangle.size.x; j++) {
+
+								_set_cell(Point2i(j, i), TileMap::INVALID_CELL, false, false, false);
+							}
+						}
+						for (List<TileData>::Element *E = copydata.front(); E; E = E->next()) {
+
+							_set_cell(E->get().pos + ofs, E->get().cell, E->get().flip_h, E->get().flip_v, E->get().transpose);
+						}
+						undo_redo->add_do_method(node, "set", "tile_data", node->get("tile_data"));
+						undo_redo->commit_action();
+
+						copydata.clear();
+						selection_active = false;
+
+						canvas_item_editor->update();
 
 					} else if (tool == TOOL_SELECTING) {
 
@@ -871,6 +926,16 @@ bool TileMapEditor::forward_gui_input(const Ref<InputEvent> &p_event) {
 					return true;
 				}
 
+				if (tool == TOOL_MOVING) {
+
+					tool = TOOL_NONE;
+					copydata.clear();
+
+					canvas_item_editor->update();
+
+					return true;
+				}
+
 				if (tool == TOOL_NONE) {
 
 					paint_undo.clear();
@@ -881,8 +946,11 @@ bool TileMapEditor::forward_gui_input(const Ref<InputEvent> &p_event) {
 					undo_redo->add_undo_method(node, "set", "tile_data", node->get("tile_data"));
 
 					if (mb->get_shift()) {
-
+#ifdef APPLE_STYLE_KEYS
+						if (mb->get_command())
+#else
 						if (mb->get_control())
+#endif
 							tool = TOOL_RECTANGLE_ERASE;
 						else
 							tool = TOOL_LINE_ERASE;
@@ -1078,7 +1146,7 @@ bool TileMapEditor::forward_gui_input(const Ref<InputEvent> &p_event) {
 
 		if (k->get_scancode() == KEY_ESCAPE) {
 
-			if (tool == TOOL_DUPLICATING)
+			if (tool == TOOL_DUPLICATING || tool == TOOL_MOVING)
 				copydata.clear();
 			else if (tool == TOOL_SELECTING || selection_active)
 				selection_active = false;
@@ -1133,6 +1201,14 @@ bool TileMapEditor::forward_gui_input(const Ref<InputEvent> &p_event) {
 				return true;
 			}
 		}
+		if (ED_IS_SHORTCUT("tile_map_editor/move_selection", p_event)) {
+			if (selection_active) {
+				_update_copydata();
+				tool = TOOL_MOVING;
+				canvas_item_editor->update();
+				return true;
+			}
+		}
 		if (ED_IS_SHORTCUT("tile_map_editor/find_tile", p_event)) {
 			search_box->select_all();
 			search_box->grab_focus();
@@ -1142,18 +1218,21 @@ bool TileMapEditor::forward_gui_input(const Ref<InputEvent> &p_event) {
 		if (ED_IS_SHORTCUT("tile_map_editor/mirror_x", p_event)) {
 			flip_h = !flip_h;
 			mirror_x->set_pressed(flip_h);
+			_update_transform_buttons();
 			canvas_item_editor->update();
 			return true;
 		}
 		if (ED_IS_SHORTCUT("tile_map_editor/mirror_y", p_event)) {
 			flip_v = !flip_v;
 			mirror_y->set_pressed(flip_v);
+			_update_transform_buttons();
 			canvas_item_editor->update();
 			return true;
 		}
 		if (ED_IS_SHORTCUT("tile_map_editor/transpose", p_event)) {
 			transpose = !transpose;
 			transp->set_pressed(transpose);
+			_update_transform_buttons();
 			canvas_item_editor->update();
 			return true;
 		}
@@ -1326,7 +1405,7 @@ void TileMapEditor::forward_draw_over_viewport(Control *p_overlay) {
 					_draw_cell(id, Point2i(j, i), flip_h, flip_v, transpose, xform);
 				}
 			}
-		} else if (tool == TOOL_DUPLICATING) {
+		} else if (tool == TOOL_DUPLICATING || tool == TOOL_MOVING) {
 
 			if (copydata.empty())
 				return;
@@ -1511,8 +1590,8 @@ TileMapEditor::TileMapEditor(EditorNode *p_editor) {
 	bucket_cache_tile = -1;
 	bucket_cache_visited = 0;
 
-	ED_SHORTCUT("tile_map_editor/erase_selection", TTR("Erase selection"), KEY_DELETE);
-	ED_SHORTCUT("tile_map_editor/find_tile", TTR("Find tile"), KEY_MASK_CMD + KEY_F);
+	ED_SHORTCUT("tile_map_editor/erase_selection", TTR("Erase Selection"), KEY_DELETE);
+	ED_SHORTCUT("tile_map_editor/find_tile", TTR("Find Tile"), KEY_MASK_CMD + KEY_F);
 	ED_SHORTCUT("tile_map_editor/transpose", TTR("Transpose"), KEY_T);
 	ED_SHORTCUT("tile_map_editor/mirror_x", TTR("Mirror X"), KEY_A);
 	ED_SHORTCUT("tile_map_editor/mirror_y", TTR("Mirror Y"), KEY_S);
@@ -1573,8 +1652,11 @@ TileMapEditor::TileMapEditor(EditorNode *p_editor) {
 	p->add_item(TTR("Pick Tile"), OPTION_PICK_TILE, KEY_CONTROL);
 	p->add_separator();
 	p->add_shortcut(ED_SHORTCUT("tile_map_editor/select", TTR("Select"), KEY_MASK_CMD + KEY_B), OPTION_SELECT);
+	p->add_shortcut(ED_SHORTCUT("tile_map_editor/move_selection", TTR("Move Selection"), KEY_MASK_CMD + KEY_M), OPTION_MOVE);
 	p->add_shortcut(ED_SHORTCUT("tile_map_editor/duplicate_selection", TTR("Duplicate Selection"), KEY_MASK_CMD + KEY_D), OPTION_DUPLICATE);
 	p->add_shortcut(ED_GET_SHORTCUT("tile_map_editor/erase_selection"), OPTION_ERASE_SELECTION);
+	p->add_separator();
+	p->add_item(TTR("Fix Invalid Tiles"), OPTION_FIX_INVALID);
 
 	p->connect("id_pressed", this, "_menu_option");
 

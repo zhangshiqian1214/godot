@@ -98,14 +98,19 @@ real_t Vector2::cross(const Vector2 &p_other) const {
 	return x * p_other.y - y * p_other.x;
 }
 
-Vector2 Vector2::cross(real_t p_other) const {
-
-	return Vector2(p_other * y, -p_other * x);
-}
-
 Vector2 Vector2::floor() const {
 
 	return Vector2(Math::floor(x), Math::floor(y));
+}
+
+Vector2 Vector2::ceil() const {
+
+	return Vector2(Math::ceil(x), Math::ceil(y));
+}
+
+Vector2 Vector2::round() const {
+
+	return Vector2(Math::round(x), Math::round(y));
 }
 
 Vector2 Vector2::rotated(real_t p_by) const {

@@ -217,6 +217,8 @@ protected:
 	void _notification(int p_what);
 	static void _bind_methods();
 
+	virtual void _changed_callback(Object *p_changed, const char *p_prop);
+
 public:
 	enum {
 		INVALID_CELL = -1
@@ -243,6 +245,7 @@ public:
 	int get_cellv(const Vector2 &p_pos) const;
 
 	Rect2 _edit_get_rect() const;
+	virtual bool _edit_use_rect() const;
 
 	void make_bitmask_area_dirty(const Vector2 &p_pos);
 	void update_bitmask_area(const Vector2 &p_pos);
@@ -308,6 +311,7 @@ public:
 	void set_clip_uv(bool p_enable);
 	bool get_clip_uv() const;
 
+	void fix_invalid_tiles();
 	void clear();
 
 	TileMap();

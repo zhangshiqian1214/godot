@@ -1607,6 +1607,8 @@ Variant::operator Vector3() const {
 
 	if (type == VECTOR3)
 		return *reinterpret_cast<const Vector3 *>(_data._mem);
+	else if (type == VECTOR2)
+		return Vector3(reinterpret_cast<const Vector2 *>(_data._mem)->x, reinterpret_cast<const Vector2 *>(_data._mem)->y, 0.0);
 	else
 		return Vector3();
 }
@@ -3165,7 +3167,11 @@ String Variant::get_call_error_text(Object *p_base, const StringName &p_method, 
 
 	if (ce.error == Variant::CallError::CALL_ERROR_INVALID_ARGUMENT) {
 		int errorarg = ce.argument;
-		err_text = "Cannot convert argument " + itos(errorarg + 1) + " from " + Variant::get_type_name(p_argptrs[errorarg]->get_type()) + " to " + Variant::get_type_name(ce.expected) + ".";
+		if (p_argptrs) {
+			err_text = "Cannot convert argument " + itos(errorarg + 1) + " from " + Variant::get_type_name(p_argptrs[errorarg]->get_type()) + " to " + Variant::get_type_name(ce.expected) + ".";
+		} else {
+			err_text = "Cannot convert argument " + itos(errorarg + 1) + " from [missing argptr, type unknown] to " + Variant::get_type_name(ce.expected) + ".";
+		}
 	} else if (ce.error == Variant::CallError::CALL_ERROR_TOO_MANY_ARGUMENTS) {
 		err_text = "Method expected " + itos(ce.argument) + " arguments, but called with " + itos(p_argcount) + ".";
 	} else if (ce.error == Variant::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS) {

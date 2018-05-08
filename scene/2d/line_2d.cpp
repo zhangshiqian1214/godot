@@ -62,6 +62,10 @@ Rect2 Line2D::_edit_get_rect() const {
 	return aabb;
 }
 
+bool Line2D::_edit_use_rect() const {
+	return true;
+}
+
 bool Line2D::_edit_is_selected_on_click(const Point2 &p_point, double p_tolerance) const {
 
 	const real_t d = _width / 2 + p_tolerance;
@@ -252,18 +256,22 @@ void Line2D::_draw() {
 	lb.sharp_limit = _sharp_limit;
 	lb.width = _width;
 
-	lb.build();
-
 	RID texture_rid;
-	if (_texture.is_valid())
+	if (_texture.is_valid()) {
 		texture_rid = (**_texture).get_rid();
+
+		lb.tile_aspect = _texture->get_size().aspect();
+	}
+
+	lb.build();
 
 	VS::get_singleton()->canvas_item_add_triangle_array(
 			get_canvas_item(),
 			lb.indices,
 			lb.vertices,
 			lb.colors,
-			lb.uvs,
+			lb.uvs, Vector<int>(), Vector<float>(),
+
 			texture_rid);
 
 	// DEBUG

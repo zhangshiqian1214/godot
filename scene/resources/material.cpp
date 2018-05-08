@@ -387,9 +387,11 @@ void SpatialMaterial::_update_shader() {
 	if (flags[FLAG_USE_VERTEX_LIGHTING]) {
 		code += ",vertex_lighting";
 	}
-
 	if (flags[FLAG_TRIPLANAR_USE_WORLD] && (flags[FLAG_UV1_USE_TRIPLANAR] || flags[FLAG_UV2_USE_TRIPLANAR])) {
 		code += ",world_vertex_coords";
+	}
+	if (flags[FLAG_DONT_RECEIVE_SHADOWS]) {
+		code += ",shadows_disabled";
 	}
 	code += ";\n";
 
@@ -737,15 +739,18 @@ void SpatialMaterial::_update_shader() {
 		}
 	}
 
-	if (features[FEATURE_REFRACTION] && !flags[FLAG_UV1_USE_TRIPLANAR]) { //refraction not supported with triplanar
+	if (features[FEATURE_REFRACTION]) {
 
 		if (features[FEATURE_NORMAL_MAPPING]) {
 			code += "\tvec3 ref_normal = normalize( mix(NORMAL,TANGENT * NORMALMAP.x + BINORMAL * NORMALMAP.y + NORMAL * NORMALMAP.z,NORMALMAP_DEPTH) );\n";
 		} else {
 			code += "\tvec3 ref_normal = NORMAL;\n";
 		}
-
-		code += "\tvec2 ref_ofs = SCREEN_UV - ref_normal.xy * dot(texture(texture_refraction,base_uv),refraction_texture_channel) * refraction;\n";
+		if (flags[FLAG_UV1_USE_TRIPLANAR]) {
+			code += "\tvec2 ref_ofs = SCREEN_UV - ref_normal.xy * dot(triplanar_texture(texture_refraction,uv1_power_normal,uv1_triplanar_pos),refraction_texture_channel) * refraction;\n";
+		} else {
+			code += "\tvec2 ref_ofs = SCREEN_UV - ref_normal.xy * dot(texture(texture_refraction,base_uv),refraction_texture_channel) * refraction;\n";
+		}
 		code += "\tfloat ref_amount = 1.0 - albedo.a * albedo_tex.a;\n";
 		code += "\tEMISSION += textureLod(SCREEN_TEXTURE,ref_ofs,ROUGHNESS * 8.0).rgb * ref_amount;\n";
 		code += "\tALBEDO *= 1.0 - ref_amount;\n";
@@ -1479,9 +1484,9 @@ bool SpatialMaterial::is_grow_enabled() const {
 	return grow_enabled;
 }
 
-void SpatialMaterial::set_alpha_scissor_threshold(float p_treshold) {
-	alpha_scissor_threshold = p_treshold;
-	VS::get_singleton()->material_set_param(_get_material(), shader_names->alpha_scissor_threshold, p_treshold);
+void SpatialMaterial::set_alpha_scissor_threshold(float p_threshold) {
+	alpha_scissor_threshold = p_threshold;
+	VS::get_singleton()->material_set_param(_get_material(), shader_names->alpha_scissor_threshold, p_threshold);
 }
 
 float SpatialMaterial::get_alpha_scissor_threshold() const {
@@ -1846,6 +1851,7 @@ void SpatialMaterial::_bind_methods() {
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_world_triplanar"), "set_flag", "get_flag", FLAG_TRIPLANAR_USE_WORLD);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_fixed_size"), "set_flag", "get_flag", FLAG_FIXED_SIZE);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_albedo_tex_force_srgb"), "set_flag", "get_flag", FLAG_ALBEDO_TEXTURE_FORCE_SRGB);
+	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_do_not_receive_shadows"), "set_flag", "get_flag", FLAG_DONT_RECEIVE_SHADOWS);
 	ADD_GROUP("Vertex Color", "vertex_color");
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "vertex_color_use_as_albedo"), "set_flag", "get_flag", FLAG_ALBEDO_FROM_VERTEX_COLOR);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "vertex_color_is_srgb"), "set_flag", "get_flag", FLAG_SRGB_VERTEX_COLOR);
@@ -2035,6 +2041,7 @@ void SpatialMaterial::_bind_methods() {
 	BIND_ENUM_CONSTANT(FLAG_USE_ALPHA_SCISSOR);
 	BIND_ENUM_CONSTANT(FLAG_TRIPLANAR_USE_WORLD);
 	BIND_ENUM_CONSTANT(FLAG_ALBEDO_TEXTURE_FORCE_SRGB);
+	BIND_ENUM_CONSTANT(FLAG_DONT_RECEIVE_SHADOWS);
 	BIND_ENUM_CONSTANT(FLAG_MAX);
 
 	BIND_ENUM_CONSTANT(DIFFUSE_BURLEY);

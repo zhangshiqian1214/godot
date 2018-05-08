@@ -813,7 +813,7 @@ static void _encode_string(const String &p_string, uint8_t *&buf, int &r_len) {
 	while (r_len % 4) {
 		r_len++; //pad
 		if (buf) {
-			buf++;
+			*(buf++) = 0;
 		}
 	}
 }
@@ -1211,7 +1211,9 @@ Error encode_variant(const Variant &p_variant, uint8_t *r_buffer, int &r_len, bo
 				r_len += len;
 				if (buf)
 					buf += len;
-				encode_variant(d[E->get()], buf, len, p_object_as_id);
+				Variant *v = d.getptr(E->get());
+				ERR_FAIL_COND_V(!v, ERR_BUG);
+				encode_variant(*v, buf, len, p_object_as_id);
 				ERR_FAIL_COND_V(len % 4, ERR_BUG);
 				r_len += len;
 				if (buf)

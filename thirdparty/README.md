@@ -11,6 +11,9 @@ The files were adapted to Godot by removing the dependency on b2Math (replacing
 it by b2Glue.h) and commenting out some verbose printf calls.
 Upstream code has not changed in 10 years, no need to keep track of changes.
 
+Important: Some files have Godot-made changes.
+They are marked with `// -- GODOT start --` and `// -- GODOT end --`
+comments.
 
 ## bullet
 
@@ -26,9 +29,14 @@ Files extracted from upstream source:
 
 ## certs
 
-- Upstream: Mozilla, via https://packages.ubuntu.com/xenial-updates/ca-certificates
-- Version: 2016-ish
+- Upstream: Mozilla, via https://apps.fedoraproject.org/packages/ca-certificates
+- Version: 2018.2.22
 - License: MPL 2.0
+
+File extracted from a recent Fedora install:
+/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+(It can't be extracted directly from the package,
+as it's generated on the user's system.)
 
 
 ## enet
@@ -64,6 +72,9 @@ Files extracted from upstream source:
 - all .cpp and .h files in EtcLib/
 - README.md, LICENSE, AUTHORS
 
+Important: Some files have Godot-made changes.
+They are marked with `// -- GODOT start --` and `// -- GODOT end --`
+comments.
 
 ## fonts
 
@@ -78,7 +89,7 @@ Use UI font variant if available, because it has tight vertical metrics and good
 ### Hack Regular
 
 - Upstream: https://github.com/source-foundry/Hack
-- Version: 3.000
+- Version: 3.003
 - License: MIT + Bitstream Vera License
 
 ### DroidSans*.ttf
@@ -104,7 +115,7 @@ Files extracted from upstream source:
 ## glad
 
 - Upstream: https://github.com/Dav1dde/glad
-- Version: 0.1.16a0
+- Version: 0.1.20a0
 - License: MIT
 
 The files we package are automatically generated.
@@ -160,6 +171,9 @@ Files extracted from upstream source:
 
 TODO.
 
+Important: Some files have Godot-made changes.
+They are marked with `// -- GODOT start --` and `// -- GODOT end --`
+comments.
 
 ## libtheora
 
@@ -220,19 +234,35 @@ changes are marked with `// -- GODOT --` comments.
 ## libwebsockets
 
 - Upstream: https://github.com/warmcat/libwebsockets
-- Version: 2.4.1
+- Version: 2.4.2
 - License: LGPLv2.1 + static linking exception
 
 File extracted from upstream source:
-- Everything in `lib/` except `mbedtls_wrapper/`, `http2/`, `event-libs/`.
+- Everything in `lib/` except `minilex.c`, `http2/`, `event-libs/`.
   - From `misc/` exclude `lws-genhash.c`, `lws-ring.c`, `romfs.{c,h}`, `smtp.c`.
   - From `plat/` exclude `lws-plat-{esp*,optee}.c`.
-  - From `server/` exclude `access-log.c`, `cgi.c`, `daemonize.c`, `lws-spa.c`, 
+  - From `server/` exclude `access-log.c`, `cgi.c`, `daemonize.c`, `lws-spa.c`,
 `peer-limits.c`, `rewrite.c`
 - Also copy `win32helpers/` from `win32port/`
+- `mbedtls_wrapper/include/platform/ssl_port.h` has a small change to check for OSX and FreeBSD (missing `malloc.h`).
+  The bug is fixed in upstream master via `LWS_HAVE_MALLOC_H`, but not in the 2.4.1 branch (as the file structure has changed).
+- You might need to apply the patch in `thirdparty/lws/mbedtls_verify.diff` (port of PR 1215) to future `2.4.x` releases if it does not get cherry picked.
 
-Important: `lws_config.h` and `lws_config_private.h` contains custom 
+Important: `lws_config.h` and `lws_config_private.h` contains custom
 Godot build configurations, check them out when updating.
+
+## mbedTLS
+
+- Upstream: https://tls.mbed.org/
+- Version: 2.8.0
+- License: Apache 2.0
+
+File extracted from upstream release tarball `mbedtls-2.8.0-apache.tgz`:
+- All `*.h` from `include/mbedtls/` to `thirdparty/mbedtls/include/mbedtls/`
+- All `*.c` from `library/` to `thirdparty/mbedtls/library/`
+- In file `thirdparty/mbedtls/library/net_sockets.c` mbedTLS overrides the `_WIN32_WINNT` define.
+  Be sure to check the Godot addition to only redfine it when undefined or `< 0x0501` (PRed upstream).
+- Applied the patch in `thirdparty/mbedtls/1453.diff` (PR 1453). Soon to be merged upstream. Check it out at next update.
 
 ## minizip
 
@@ -330,37 +360,6 @@ Files extracted from the upstream source:
 
 - All .h files in `src/`
 - LICENSE.txt
-
-
-## openssl
-
-- Upstream: https://www.openssl.org
-- Version: 1.0.2n
-- License: OpenSSL license / BSD-like
-
-Files extracted from the upstream source:
-
-- Our `openssl/`: contains the headers installed in /usr/include/openssl;
-  gather them in the source tarball with `make links` and
-  `cp -f include/openssl/*.h ../openssl/openssl/`
-- Our `crypto/`: copy of upstream `crypto/`, with some cleanup (see below).
-- Our `ssl/`: copy of upstream `ssl/`, with some cleanup (see below).
-- Cleanup:
-  ```
-  find \( -name "Makefile" -o -name "*.S" -o -name "*.bat" -o -name "*.bc" \
-    -o -name "*.com" -o -name "*.cnf" -o -name "*.ec" -o -name "*.fre" \
-    -o -name "*.gcc" -o -name "*.in" -o -name "*.lnx" -o -name "*.m4" \
-    -o -name "*.pl" -o -name "*.pod" -o -name "*.s" -o -name "*.sh" \
-    -o -name "*.sol" -o -name "*test*" \) -delete
-  cd openssl; for file in *.h; do find ../{crypto,ssl} -name "$file" -delete; done; cd ..
-  ```
-  For the rest check the `git status` and decide.
-- e_os.h
-- MacOS/buildinf.h
-- LICENSE
-- Apply the Godot-specific patches in the `patches/` folder
-  (make sure not to commit .orig/.rej files generated by `patch`).
-
 
 ## opus
 

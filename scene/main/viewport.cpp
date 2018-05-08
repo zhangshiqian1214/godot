@@ -181,6 +181,7 @@ public:
 Viewport::GUI::GUI() {
 
 	mouse_focus = NULL;
+	mouse_click_grabber = NULL;
 	mouse_focus_button = -1;
 	key_focus = NULL;
 	mouse_over = NULL;
@@ -192,6 +193,7 @@ Viewport::GUI::GUI() {
 }
 
 /////////////////////////////////////
+
 void Viewport::_update_stretch_transform() {
 
 	if (size_override_stretch && size_override) {
@@ -318,6 +320,11 @@ void Viewport::_notification(int p_what) {
 					first->make_current();
 			}
 #endif
+
+			// Enable processing for tooltips, collision debugging, physics object picking, etc.
+			set_process_internal(true);
+			set_physics_process_internal(true);
+
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
 
@@ -345,14 +352,17 @@ void Viewport::_notification(int p_what) {
 			VS::get_singleton()->viewport_set_active(viewport, false);
 
 		} break;
-		case NOTIFICATION_PHYSICS_PROCESS: {
+		case NOTIFICATION_INTERNAL_PROCESS: {
 
 			if (gui.tooltip_timer >= 0) {
-				gui.tooltip_timer -= get_physics_process_delta_time();
+				gui.tooltip_timer -= get_process_delta_time();
 				if (gui.tooltip_timer < 0) {
 					_gui_show_tooltip();
 				}
 			}
+
+		} break;
+		case NOTIFICATION_INTERNAL_PHYSICS_PROCESS: {
 
 			if (get_tree()->is_debugging_collisions_hint() && contact_2d_debug.is_valid()) {
 
@@ -1804,7 +1814,7 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 		}
 
 		if (!over) {
-			OS::get_singleton()->set_cursor_shape(OS::CURSOR_ARROW);
+			OS::get_singleton()->set_cursor_shape((OS::CursorShape)Input::get_singleton()->get_default_cursor_shape());
 			return;
 		}
 
@@ -1925,6 +1935,8 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 	Ref<InputEventGesture> gesture_event = p_event;
 	if (gesture_event.is_valid()) {
 
+		gui.key_event_accepted = false;
+
 		_gui_cancel_tooltip();
 
 		Size2 pos = gesture_event->get_position();
@@ -2017,6 +2029,9 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 				top->notification(Control::NOTIFICATION_MODAL_CLOSE);
 				top->_modal_stack_remove();
 				top->hide();
+				// Close modal, set input as handled
+				get_tree()->set_input_as_handled();
+				return;
 			}
 		}
 
@@ -2153,9 +2168,7 @@ void Viewport::_gui_set_drag_preview(Control *p_base, Control *p_control) {
 	p_control->set_position(gui.last_mouse_pos);
 	p_base->get_root_parent_control()->add_child(p_control); //add as child of viewport
 	p_control->raise();
-	if (gui.drag_preview) {
-		memdelete(gui.drag_preview);
-	}
+
 	gui.drag_preview = p_control;
 }
 
@@ -2264,7 +2277,7 @@ List<Control *>::Element *Viewport::_gui_show_modal(Control *p_control) {
 	else
 		p_control->_modal_set_prev_focus_owner(0);
 
-	if (gui.mouse_focus && !p_control->is_a_parent_of(gui.mouse_focus)) {
+	if (gui.mouse_focus && !p_control->is_a_parent_of(gui.mouse_focus) && !gui.mouse_click_grabber) {
 		Ref<InputEventMouseButton> mb;
 		mb.instance();
 		mb->set_position(gui.mouse_focus->get_local_mouse_position());
@@ -2286,9 +2299,22 @@ Control *Viewport::_gui_get_focus_owner() {
 
 void Viewport::_gui_grab_click_focus(Control *p_control) {
 
+	gui.mouse_click_grabber = p_control;
+	call_deferred("_post_gui_grab_click_focus");
+}
+
+void Viewport::_post_gui_grab_click_focus() {
+
+	Control *focus_grabber = gui.mouse_click_grabber;
+	if (!focus_grabber) {
+		// Redundant grab requests were made
+		return;
+	}
+	gui.mouse_click_grabber = NULL;
+
 	if (gui.mouse_focus) {
 
-		if (gui.mouse_focus == p_control)
+		if (gui.mouse_focus == focus_grabber)
 			return;
 		Ref<InputEventMouseButton> mb;
 		mb.instance();
@@ -2299,9 +2325,9 @@ void Viewport::_gui_grab_click_focus(Control *p_control) {
 		mb->set_position(click);
 		mb->set_button_index(gui.mouse_focus_button);
 		mb->set_pressed(false);
-		gui.mouse_focus->call_deferred(SceneStringNames::get_singleton()->_gui_input, mb);
+		gui.mouse_focus->call_multilevel(SceneStringNames::get_singleton()->_gui_input, mb);
 
-		gui.mouse_focus = p_control;
+		gui.mouse_focus = focus_grabber;
 		gui.focus_inv_xform = gui.mouse_focus->get_global_transform_with_canvas().affine_inverse();
 		click = gui.mouse_focus->get_global_transform_with_canvas().affine_inverse().xform(gui.last_mouse_pos);
 		mb->set_position(click);
@@ -2404,9 +2430,14 @@ Rect2 Viewport::get_attach_to_screen_rect() const {
 void Viewport::set_physics_object_picking(bool p_enable) {
 
 	physics_object_picking = p_enable;
-	set_physics_process(physics_object_picking);
-	if (!physics_object_picking)
+	if (!physics_object_picking) {
 		physics_picking_events.clear();
+	}
+}
+
+bool Viewport::get_physics_object_picking() {
+
+	return physics_object_picking;
 }
 
 Vector2 Viewport::get_camera_coords(const Vector2 &p_viewport_coords) const {
@@ -2418,11 +2449,6 @@ Vector2 Viewport::get_camera_coords(const Vector2 &p_viewport_coords) const {
 Vector2 Viewport::get_camera_rect_size() const {
 
 	return size;
-}
-
-bool Viewport::get_physics_object_picking() {
-
-	return physics_object_picking;
 }
 
 bool Viewport::gui_has_modal_stack() const {
@@ -2447,6 +2473,16 @@ void Viewport::set_disable_3d(bool p_disable) {
 bool Viewport::is_3d_disabled() const {
 
 	return disable_3d;
+}
+
+void Viewport::set_keep_3d_linear(bool p_keep_3d_linear) {
+	keep_3d_linear = p_keep_3d_linear;
+	VS::get_singleton()->viewport_set_keep_3d_linear(viewport, keep_3d_linear);
+}
+
+bool Viewport::get_keep_3d_linear() const {
+
+	return keep_3d_linear;
 }
 
 Variant Viewport::gui_get_drag_data() const {
@@ -2632,8 +2668,12 @@ void Viewport::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_disable_3d", "disable"), &Viewport::set_disable_3d);
 	ClassDB::bind_method(D_METHOD("is_3d_disabled"), &Viewport::is_3d_disabled);
 
+	ClassDB::bind_method(D_METHOD("set_keep_3d_linear", "keep_3d_linear"), &Viewport::set_keep_3d_linear);
+	ClassDB::bind_method(D_METHOD("get_keep_3d_linear"), &Viewport::get_keep_3d_linear);
+
 	ClassDB::bind_method(D_METHOD("_gui_show_tooltip"), &Viewport::_gui_show_tooltip);
 	ClassDB::bind_method(D_METHOD("_gui_remove_focus"), &Viewport::_gui_remove_focus);
+	ClassDB::bind_method(D_METHOD("_post_gui_grab_click_focus"), &Viewport::_post_gui_grab_click_focus);
 
 	ClassDB::bind_method(D_METHOD("set_shadow_atlas_size", "size"), &Viewport::set_shadow_atlas_size);
 	ClassDB::bind_method(D_METHOD("get_shadow_atlas_size"), &Viewport::get_shadow_atlas_size);
@@ -2655,6 +2695,7 @@ void Viewport::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "msaa", PROPERTY_HINT_ENUM, "Disabled,2x,4x,8x,16x"), "set_msaa", "get_msaa");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "hdr"), "set_hdr", "get_hdr");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "disable_3d"), "set_disable_3d", "is_3d_disabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "keep_3d_linear"), "set_keep_3d_linear", "get_keep_3d_linear");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "usage", PROPERTY_HINT_ENUM, "2D,2D No-Sampling,3D,3D No-Effects"), "set_usage", "get_usage");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "debug_draw", PROPERTY_HINT_ENUM, "Disabled,Unshaded,Overdraw,Wireframe"), "set_debug_draw", "get_debug_draw");
 	ADD_GROUP("Render Target", "render_target_");
@@ -2777,6 +2818,7 @@ Viewport::Viewport() {
 
 	disable_input = false;
 	disable_3d = false;
+	keep_3d_linear = false;
 
 	//window tooltip
 	gui.tooltip_timer = -1;
@@ -2789,6 +2831,7 @@ Viewport::Viewport() {
 	gui.drag_preview = NULL;
 	gui.drag_attempted = false;
 	gui.canvas_sort_index = 0;
+	gui.roots_order_dirty = false;
 
 	msaa = MSAA_DISABLED;
 	hdr = true;

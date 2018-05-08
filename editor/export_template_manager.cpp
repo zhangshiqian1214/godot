@@ -70,7 +70,7 @@ void ExportTemplateManager::_update_template_list() {
 
 	memdelete(d);
 
-	String current_version = itos(VERSION_MAJOR) + "." + itos(VERSION_MINOR) + "-" + VERSION_STATUS + VERSION_MODULE_CONFIG;
+	String current_version = VERSION_FULL_CONFIG;
 
 	Label *current = memnew(Label);
 	current->set_h_size_flags(SIZE_EXPAND_FILL);
@@ -128,7 +128,7 @@ void ExportTemplateManager::_download_template(const String &p_version) {
 		memdelete(template_list->get_child(0));
 	}
 	template_downloader->popup_centered_minsize();
-	template_list_state->set_text(TTR("Retrieving mirrors, please wait.."));
+	template_list_state->set_text(TTR("Retrieving mirrors, please wait..."));
 	template_download_progress->set_max(100);
 	template_download_progress->set_value(0);
 	request_mirror->request("https://godotengine.org/mirrorlist/" + p_version + ".json");
@@ -217,25 +217,15 @@ void ExportTemplateManager::_install_from_file(const String &p_file, bool p_use_
 			data_str.parse_utf8((const char *)data.ptr(), data.size());
 			data_str = data_str.strip_edges();
 
-			if (data_str.get_slice_count("-") != 2 || data_str.get_slice_count(".") != 2) {
-				EditorNode::get_singleton()->show_warning(TTR("Invalid version.txt format inside templates."));
+			// Version number should be of the form major.minor[.patch].status[.module_config]
+			// so it can in theory have 3 or more slices.
+			if (data_str.get_slice_count(".") < 3) {
+				EditorNode::get_singleton()->show_warning(vformat(TTR("Invalid version.txt format inside templates: %s."), data_str));
 				unzClose(pkg);
 				return;
 			}
 
-			String ver = data_str.get_slice("-", 0);
-
-			int major = ver.get_slice(".", 0).to_int();
-			int minor = ver.get_slice(".", 1).to_int();
-			String rev = data_str.get_slice("-", 1);
-
-			if (!rev.is_valid_identifier()) {
-				EditorNode::get_singleton()->show_warning(TTR("Invalid version.txt format inside templates. Revision is not a valid identifier."));
-				unzClose(pkg);
-				return;
-			}
-
-			version = itos(major) + "." + itos(minor) + "-" + rev;
+			version = data_str;
 		}
 
 		fc++;
@@ -402,19 +392,10 @@ void ExportTemplateManager::_http_download_templates_completed(int p_status, int
 			if (p_code != 200) {
 				template_list_state->set_text(TTR("Failed:") + " " + itos(p_code));
 			} else {
-				String path = EditorSettings::get_singleton()->get_cache_dir().plus_file("tmp_templates.tpz");
-				FileAccess *f = FileAccess::open(path, FileAccess::WRITE);
-				if (!f) {
-					template_list_state->set_text(TTR("Can't write file."));
-				} else {
-					int size = p_data.size();
-					PoolVector<uint8_t>::Read r = p_data.read();
-					f->store_buffer(r.ptr(), size);
-					memdelete(f);
-					template_list_state->set_text(TTR("Download Complete."));
-					template_downloader->hide();
-					_install_from_file(path, false);
-				}
+				String path = download_templates->get_download_file();
+				template_list_state->set_text(TTR("Download Complete."));
+				template_downloader->hide();
+				_install_from_file(path, false);
 			}
 		} break;
 	}
@@ -437,6 +418,8 @@ void ExportTemplateManager::_begin_template_download(const String &p_url) {
 	}
 
 	download_data.clear();
+	download_templates->set_download_file(EditorSettings::get_singleton()->get_cache_dir().plus_file("tmp_templates.tpz"));
+	download_templates->set_use_threads(true);
 
 	Error err = download_templates->request(p_url);
 	if (err != OK) {
@@ -450,7 +433,7 @@ void ExportTemplateManager::_begin_template_download(const String &p_url) {
 	template_download_progress->set_max(100);
 	template_download_progress->set_value(0);
 	template_download_progress->show();
-	template_list_state->set_text(TTR("Connecting to Mirror.."));
+	template_list_state->set_text(TTR("Connecting to Mirror..."));
 }
 
 void ExportTemplateManager::_notification(int p_what) {
@@ -476,13 +459,13 @@ void ExportTemplateManager::_notification(int p_what) {
 				status = TTR("Can't Resolve");
 				errored = true;
 				break;
-			case HTTPClient::STATUS_CONNECTING: status = TTR("Connecting.."); break;
+			case HTTPClient::STATUS_CONNECTING: status = TTR("Connecting..."); break;
 			case HTTPClient::STATUS_CANT_CONNECT:
 				status = TTR("Can't Connect");
 				errored = true;
 				break;
 			case HTTPClient::STATUS_CONNECTED: status = TTR("Connected"); break;
-			case HTTPClient::STATUS_REQUESTING: status = TTR("Requesting.."); break;
+			case HTTPClient::STATUS_REQUESTING: status = TTR("Requesting..."); break;
 			case HTTPClient::STATUS_BODY:
 				status = TTR("Downloading");
 				if (download_templates->get_body_size() > 0) {

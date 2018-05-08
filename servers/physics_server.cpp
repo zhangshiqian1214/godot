@@ -92,9 +92,11 @@ void PhysicsDirectBodyState::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_transform", "transform"), &PhysicsDirectBodyState::set_transform);
 	ClassDB::bind_method(D_METHOD("get_transform"), &PhysicsDirectBodyState::get_transform);
 
+	ClassDB::bind_method(D_METHOD("add_central_force", "force"), &PhysicsDirectBodyState::add_central_force);
 	ClassDB::bind_method(D_METHOD("add_force", "force", "position"), &PhysicsDirectBodyState::add_force);
+	ClassDB::bind_method(D_METHOD("add_torque", "torque"), &PhysicsDirectBodyState::add_torque);
 	ClassDB::bind_method(D_METHOD("apply_impulse", "position", "j"), &PhysicsDirectBodyState::apply_impulse);
-	ClassDB::bind_method(D_METHOD("apply_torqe_impulse", "j"), &PhysicsDirectBodyState::apply_torque_impulse);
+	ClassDB::bind_method(D_METHOD("apply_torque_impulse", "j"), &PhysicsDirectBodyState::apply_torque_impulse);
 
 	ClassDB::bind_method(D_METHOD("set_sleep_state", "enabled"), &PhysicsDirectBodyState::set_sleep_state);
 	ClassDB::bind_method(D_METHOD("is_sleeping"), &PhysicsDirectBodyState::is_sleeping);
@@ -601,6 +603,8 @@ void PhysicsServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(G6DOF_JOINT_LINEAR_LIMIT_SOFTNESS);
 	BIND_ENUM_CONSTANT(G6DOF_JOINT_LINEAR_RESTITUTION);
 	BIND_ENUM_CONSTANT(G6DOF_JOINT_LINEAR_DAMPING);
+	BIND_ENUM_CONSTANT(G6DOF_JOINT_LINEAR_MOTOR_TARGET_VELOCITY);
+	BIND_ENUM_CONSTANT(G6DOF_JOINT_LINEAR_MOTOR_FORCE_LIMIT);
 	BIND_ENUM_CONSTANT(G6DOF_JOINT_ANGULAR_LOWER_LIMIT);
 	BIND_ENUM_CONSTANT(G6DOF_JOINT_ANGULAR_UPPER_LIMIT);
 	BIND_ENUM_CONSTANT(G6DOF_JOINT_ANGULAR_LIMIT_SOFTNESS);
@@ -614,6 +618,7 @@ void PhysicsServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(G6DOF_JOINT_FLAG_ENABLE_LINEAR_LIMIT);
 	BIND_ENUM_CONSTANT(G6DOF_JOINT_FLAG_ENABLE_ANGULAR_LIMIT);
 	BIND_ENUM_CONSTANT(G6DOF_JOINT_FLAG_ENABLE_MOTOR);
+	BIND_ENUM_CONSTANT(G6DOF_JOINT_FLAG_ENABLE_LINEAR_MOTOR);
 
 	ClassDB::bind_method(D_METHOD("joint_get_type", "joint"), &PhysicsServer::joint_get_type);
 

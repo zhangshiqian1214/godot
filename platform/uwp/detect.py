@@ -25,8 +25,11 @@ def can_build():
 
 
 def get_opts():
+    from SCons.Variables import BoolVariable
 
     return [
+        ('msvc_version', 'MSVC version to use. Ignored if VCINSTALLDIR is set in shell env.', None),
+        BoolVariable('use_mingw', 'Use the Mingw compiler, even if MSVC is installed. Only used on Windows.', False),
     ]
 
 
@@ -39,6 +42,8 @@ def get_flags():
 
 
 def configure(env):
+
+    env.msvc = True
 
     if (env["bits"] != "default"):
         print("Error: bits argument is disabled for MSVC")
@@ -160,6 +165,7 @@ def configure(env):
         'libANGLE',
         'libEGL',
         'libGLESv2',
+        'bcrypt',
     ]
     env.Append(LINKFLAGS=[p + ".lib" for p in LIBS])
 

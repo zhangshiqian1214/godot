@@ -2028,6 +2028,7 @@ void VisualScriptInstance::create(const Ref<VisualScript> &p_script, Object *p_o
 		function.flow_stack_size = 0;
 		function.pass_stack_size = 0;
 		function.node_count = 0;
+
 		Map<StringName, int> local_var_indices;
 
 		if (function.node < 0) {
@@ -2182,7 +2183,7 @@ void VisualScriptInstance::create(const Ref<VisualScript> &p_script, Object *p_o
 			Ref<VisualScriptNode> node = F->get().node;
 			VisualScriptNodeInstance *instance = instances[F->key()];
 
-			// conect to default values
+			// connect to default values
 			for (int i = 0; i < instance->input_port_count; i++) {
 				if (instance->input_ports[i] == -1) {
 
@@ -2192,7 +2193,7 @@ void VisualScriptInstance::create(const Ref<VisualScript> &p_script, Object *p_o
 				}
 			}
 
-			// conect to trash
+			// connect to trash
 			for (int i = 0; i < instance->output_port_count; i++) {
 				if (instance->output_ports[i] == -1) {
 					instance->output_ports[i] = function.trash_pos; //trash is same for all

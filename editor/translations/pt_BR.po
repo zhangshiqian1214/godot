@@ -4,30 +4,32 @@
 # This file is distributed under the same license as the Godot source code.
 #
 # Allyson Souza <allyson_as@outlook.com>, 2017.
+# Anderson Araujo <anderson.araujoprog@gmail.com>, 2018.
 # António Sarmento <antonio.luis.sarmento@gmail.com>, 2016.
 # AWK <arthurwk1800@gmail.com>, 2017.
 # Francesco Perrotti-Garcia <fpg1503@gmail.com>, 2017.
 # George Marques <george@gmarqu.es>, 2016.
 # Guilherme Felipe C G Silva <guilhermefelipecgs@gmail.com>, 2017.
+# João Victor Lima <victordevtb@outlook.com>, 2018.
+# João Vitor de Oliveira Carlos <lopogax@gmail.com>, 2018.
 # Joaquim Ferreira <joaquimferreira1996@bol.com.br>, 2016.
 # jonathan railarem <railarem@gmail.com>, 2017.
 # Lucas Silva <lucasb.hpp@gmail.com>, 2018.
 # Luiz G. Correia <luizgabriell2.0@gmail.com>, 2017.
 # Mailson Silva Marins <mailsons335@gmail.com>, 2016.
 # MalcomRF <malcomkbk@gmail.com>, 2017.
-# Marcus Correia <marknokalt@live.com>, 2017.
+# Marcus Correia <marknokalt@live.com>, 2017-2018.
 # Michael Alexsander Silva Dias <michaelalexsander@protonmail.com>, 2017-2018.
 # Renato Rotenberg <renato.rotenberg@gmail.com>, 2017.
-# Rodolfo R Gomes <rodolforg@gmail.com>, 2017.
+# Rodolfo R Gomes <rodolforg@gmail.com>, 2017-2018.
 # Tiago Almeida <thyagoeap@gmail.com>, 2017.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: Godot Engine editor\n"
 "POT-Creation-Date: 2016-05-30\n"
-"PO-Revision-Date: 2018-01-22 08:08+0000\n"
-"Last-Translator: Michael Alexsander Silva Dias <michaelalexsander@protonmail."
-"com>\n"
+"PO-Revision-Date: 2018-04-30 13:39+0000\n"
+"Last-Translator: Rodolfo R Gomes <rodolforg@gmail.com>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/"
 "godot-engine/godot/pt_BR/>\n"
 "Language: pt_BR\n"
@@ -35,7 +37,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 2.19-dev\n"
+"X-Generator: Weblate 3.0-dev\n"
 
 #: editor/animation_editor.cpp
 msgid "Disabled"
@@ -43,11 +45,11 @@ msgstr "Desabilitado"
 
 #: editor/animation_editor.cpp
 msgid "All Selection"
-msgstr "Toda a Seleção"
+msgstr "Toda a seleção"
 
 #: editor/animation_editor.cpp
 msgid "Anim Change Keyframe Time"
-msgstr "Alterar tempo de quadro-chave da animação"
+msgstr "Alterar Tempo de Quadro-Chave da Anim"
 
 #: editor/animation_editor.cpp
 msgid "Anim Change Transition"
@@ -59,7 +61,7 @@ msgstr "Alterar Transformação da Anim"
 
 #: editor/animation_editor.cpp
 msgid "Anim Change Keyframe Value"
-msgstr "Alterar valor de quadro-chave da animação"
+msgstr "Alterar Valor de Quadro-Chave da Anim"
 
 #: editor/animation_editor.cpp
 msgid "Anim Change Call"
@@ -433,7 +435,7 @@ msgstr "Coluna:"
 
 #: editor/connections_dialog.cpp
 msgid "Method in target Node must be specified!"
-msgstr "O método no Nó destino precisa ser especificado!"
+msgstr "O método no nó destino precisa ser especificado!"
 
 #: editor/connections_dialog.cpp
 msgid ""
@@ -441,7 +443,7 @@ msgid ""
 "Node."
 msgstr ""
 "Método destino não encontrado! Específique um método válido ou anexe um "
-"script ao Nó destino."
+"script ao nó destino."
 
 #: editor/connections_dialog.cpp
 msgid "Connect To Node:"
@@ -470,7 +472,7 @@ msgstr "Argumentos de Chamada Extras:"
 
 #: editor/connections_dialog.cpp
 msgid "Path to Node:"
-msgstr "Caminho para o Nó:"
+msgstr "Caminho para o nó:"
 
 #: editor/connections_dialog.cpp
 msgid "Make Function"
@@ -482,7 +484,7 @@ msgstr "Postergado"
 
 #: editor/connections_dialog.cpp
 msgid "Oneshot"
-msgstr "Uma vez"
+msgstr "Oneshot"
 
 #: editor/connections_dialog.cpp editor/dependency_editor.cpp
 #: editor/export_template_manager.cpp
@@ -774,7 +776,7 @@ msgstr "Doadores"
 
 #: editor/editor_about.cpp
 msgid "License"
-msgstr "LIcença"
+msgstr "Licença"
 
 #: editor/editor_about.cpp
 msgid "Thirdparty License"
@@ -1063,7 +1065,7 @@ msgstr "Caminho:"
 
 #: editor/editor_autoload_settings.cpp
 msgid "Node Name:"
-msgstr "Nome do Nó:"
+msgstr "Nome do nó:"
 
 #: editor/editor_autoload_settings.cpp editor/editor_profiler.cpp
 #: editor/project_manager.cpp editor/settings_config_dialog.cpp
@@ -1412,6 +1414,10 @@ msgstr "Limpar"
 msgid "Clear Output"
 msgstr "Limpar Saída"
 
+#: editor/editor_node.cpp
+msgid "Project export failed with error code %d."
+msgstr ""
+
 #: editor/editor_node.cpp editor/plugins/animation_player_editor_plugin.cpp
 msgid "Error saving resource!"
 msgstr "Erro ao salvar Recurso!"
@@ -1653,11 +1659,11 @@ msgstr "Abrir Cena Base"
 
 #: editor/editor_node.cpp
 msgid "Quick Open Scene.."
-msgstr "Abri Cena Ágil..."
+msgstr "Abrir Cena Rapidamente..."
 
 #: editor/editor_node.cpp
 msgid "Quick Open Script.."
-msgstr "Abrir Rápidamente Script.."
+msgstr "Abrir Script Rapidamente..."
 
 #: editor/editor_node.cpp
 msgid "Save & Close"
@@ -1976,7 +1982,7 @@ msgstr "Depurar"
 
 #: editor/editor_node.cpp
 msgid "Deploy with Remote Debug"
-msgstr "Instalar Depuração Remota"
+msgstr "Distribuir com Depuragem Remota"
 
 #: editor/editor_node.cpp
 msgid ""
@@ -1988,7 +1994,7 @@ msgstr ""
 
 #: editor/editor_node.cpp
 msgid "Small Deploy with Network FS"
-msgstr "Instalação Pequena com FS em rede"
+msgstr "Pequeno teste com o sistema de arquivos em rede"
 
 #: editor/editor_node.cpp
 msgid ""
@@ -2031,7 +2037,7 @@ msgstr ""
 
 #: editor/editor_node.cpp
 msgid "Sync Scene Changes"
-msgstr "Sincronizar Alterações na Cena"
+msgstr "Sincronizar Mudanças de Cena"
 
 #: editor/editor_node.cpp
 msgid ""
@@ -2047,7 +2053,7 @@ msgstr ""
 
 #: editor/editor_node.cpp
 msgid "Sync Script Changes"
-msgstr "Sincronizar Alterações no Script"
+msgstr "Sincronizar Mudanças de Script"
 
 #: editor/editor_node.cpp
 msgid ""
@@ -2360,7 +2366,7 @@ msgstr "Inclusivo"
 
 #: editor/editor_profiler.cpp
 msgid "Self"
-msgstr "Mesmo"
+msgstr "Self"
 
 #: editor/editor_profiler.cpp
 msgid "Frame #:"
@@ -2417,7 +2423,7 @@ msgstr "Padrão (Mesma do Editor)"
 
 #: editor/editor_sub_scene.cpp
 msgid "Select Node(s) to Import"
-msgstr "Selecionar Nó(s) para Importar"
+msgstr "Selecione Nó(s) para Importar"
 
 #: editor/editor_sub_scene.cpp
 msgid "Scene Path:"
@@ -2466,14 +2472,6 @@ msgstr "Não se pôde abrir zip dos modelos de exportação."
 #: editor/export_template_manager.cpp
 msgid "Invalid version.txt format inside templates."
 msgstr "Formato do version.txt dentro dos modelos é inválido."
-
-#: editor/export_template_manager.cpp
-msgid ""
-"Invalid version.txt format inside templates. Revision is not a valid "
-"identifier."
-msgstr ""
-"Formato do version.txt dentro dos modelos é inválido. A revisão não é um "
-"identificador válido."
 
 #: editor/export_template_manager.cpp
 msgid "No version.txt found inside templates."
@@ -2528,10 +2526,6 @@ msgstr "Loop de Redirecionamento."
 #: editor/plugins/asset_library_editor_plugin.cpp
 msgid "Failed:"
 msgstr "Falhou:"
-
-#: editor/export_template_manager.cpp
-msgid "Can't write file."
-msgstr "Não foi possível escrever o arquivo."
 
 #: editor/export_template_manager.cpp
 msgid "Download Complete."
@@ -2883,7 +2877,7 @@ msgstr "Reimportar"
 
 #: editor/multi_node_edit.cpp
 msgid "MultiNode Set"
-msgstr "Múltiplos Nós definidos"
+msgstr "Múltiplos Nodes definidos"
 
 #: editor/node_dock.cpp
 msgid "Groups"
@@ -2891,7 +2885,7 @@ msgstr "Grupos"
 
 #: editor/node_dock.cpp
 msgid "Select a Node to edit Signals and Groups."
-msgstr "Selecione um Nó para editar Sinais e Grupos."
+msgstr "Selecione um nó para editar Sinais e Grupos."
 
 #: editor/plugins/abstract_polygon_2d_editor.cpp
 #: editor/plugins/light_occluder_2d_editor_plugin.cpp
@@ -3260,39 +3254,39 @@ msgstr "Árvore de Animação é inválida."
 
 #: editor/plugins/animation_tree_editor_plugin.cpp
 msgid "Animation Node"
-msgstr "Nó de Animação"
+msgstr "Nó Animation"
 
 #: editor/plugins/animation_tree_editor_plugin.cpp
 msgid "OneShot Node"
-msgstr "Nó de tipo Uma-Vez"
+msgstr "Nó OneShot"
 
 #: editor/plugins/animation_tree_editor_plugin.cpp
 msgid "Mix Node"
-msgstr "Misturar Nó"
+msgstr "Nó Mix"
 
 #: editor/plugins/animation_tree_editor_plugin.cpp
 msgid "Blend2 Node"
-msgstr "Nó Misturar2"
+msgstr "Nó Blend2"
 
 #: editor/plugins/animation_tree_editor_plugin.cpp
 msgid "Blend3 Node"
-msgstr "Nó Misturar3"
+msgstr "Nó Blend3"
 
 #: editor/plugins/animation_tree_editor_plugin.cpp
 msgid "Blend4 Node"
-msgstr "Nó Misturar4"
+msgstr "Nó Blend4"
 
 #: editor/plugins/animation_tree_editor_plugin.cpp
 msgid "TimeScale Node"
-msgstr "Nó Tempo de Escala"
+msgstr "Nó TimeScale"
 
 #: editor/plugins/animation_tree_editor_plugin.cpp
 msgid "TimeSeek Node"
-msgstr "Nó Tempo de Procura"
+msgstr "Nó TimeSeek"
 
 #: editor/plugins/animation_tree_editor_plugin.cpp
 msgid "Transition Node"
-msgstr "Nó de Transição"
+msgstr "Nó Transition"
 
 #: editor/plugins/animation_tree_editor_plugin.cpp
 msgid "Import Animations.."
@@ -3447,7 +3441,7 @@ msgstr "Oficial"
 
 #: editor/plugins/asset_library_editor_plugin.cpp
 msgid "Testing"
-msgstr "Em teste"
+msgstr "Testando"
 
 #: editor/plugins/asset_library_editor_plugin.cpp
 msgid "Assets ZIP File"
@@ -3720,16 +3714,26 @@ msgid "Show Grid"
 msgstr "Mostrar Grade"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
-msgid "Show helpers"
+msgid "Show Helpers"
 msgstr "Mostrar auxiliadores"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
-msgid "Show rulers"
+msgid "Show Rulers"
 msgstr "Mostrar réguas"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
-msgid "Show guides"
+msgid "Show Guides"
 msgstr "Mostrar guias"
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+#, fuzzy
+msgid "Show Origin"
+msgstr "Ver Origem"
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+#, fuzzy
+msgid "Show Viewport"
+msgstr "1 Viewport"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
 msgid "Center Selection"
@@ -4019,6 +4023,10 @@ msgstr "Falta uma Malha na MeshInstance!"
 #: editor/plugins/mesh_instance_editor_plugin.cpp
 msgid "Mesh has not surface to create outlines from!"
 msgstr "Malha não tem superfície para criar contornos dela!"
+
+#: editor/plugins/mesh_instance_editor_plugin.cpp
+msgid "Mesh primitive type is not PRIMITIVE_TRIANGLES!"
+msgstr ""
 
 #: editor/plugins/mesh_instance_editor_plugin.cpp
 msgid "Could not create outline!"
@@ -4558,6 +4566,22 @@ msgid "Resource clipboard is empty!"
 msgstr "Recurso da área de transferência está vazio!"
 
 #: editor/plugins/resource_preloader_editor_plugin.cpp
+#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
+msgid "Open in Editor"
+msgstr "Abrir no Editor"
+
+#: editor/plugins/resource_preloader_editor_plugin.cpp
+#: editor/scene_tree_editor.cpp
+msgid "Instance:"
+msgstr "Instância:"
+
+#: editor/plugins/resource_preloader_editor_plugin.cpp
+#: editor/plugins/theme_editor_plugin.cpp editor/project_settings_editor.cpp
+#: editor/scene_tree_editor.cpp editor/script_editor_debugger.cpp
+msgid "Type:"
+msgstr "Tipo:"
+
+#: editor/plugins/resource_preloader_editor_plugin.cpp
 #: editor/plugins/sprite_frames_editor_plugin.cpp
 msgid "Load Resource"
 msgstr "Carregar Recurso"
@@ -4844,10 +4868,6 @@ msgid "Toggle Comment"
 msgstr "Alternar Comentário"
 
 #: editor/plugins/script_text_editor.cpp
-msgid "Clone Down"
-msgstr "Clonar Abaixo"
-
-#: editor/plugins/script_text_editor.cpp
 msgid "Fold/Unfold Line"
 msgstr "Dobrar/Desdobrar Linha"
 
@@ -4858,6 +4878,10 @@ msgstr "Esconder Todas as Linhas"
 #: editor/plugins/script_text_editor.cpp
 msgid "Unfold All Lines"
 msgstr "Mostrar Todas as Linhas"
+
+#: editor/plugins/script_text_editor.cpp
+msgid "Clone Down"
+msgstr "Clonar Abaixo"
 
 #: editor/plugins/script_text_editor.cpp
 msgid "Complete Symbol"
@@ -5018,11 +5042,11 @@ msgstr "Alterar Nome da Entrada"
 
 #: editor/plugins/shader_graph_editor_plugin.cpp
 msgid "Connect Graph Nodes"
-msgstr "Conectar Nós de Grafos"
+msgstr "Conectar Nodes de Grafos"
 
 #: editor/plugins/shader_graph_editor_plugin.cpp
 msgid "Disconnect Graph Nodes"
-msgstr "Desconectar Nós de Grafos"
+msgstr "Desconectar Nodes de Grafos"
 
 #: editor/plugins/shader_graph_editor_plugin.cpp
 msgid "Remove Shader Graph Node"
@@ -5292,7 +5316,7 @@ msgstr "Modo Escala (R)"
 
 #: editor/plugins/spatial_editor_plugin.cpp
 msgid "Local Coords"
-msgstr "Coordenadas Locais"
+msgstr "Local Coords"
 
 #: editor/plugins/spatial_editor_plugin.cpp
 msgid "Local Space Mode (%s)"
@@ -5676,6 +5700,16 @@ msgid "Checked Item"
 msgstr "Item Checado"
 
 #: editor/plugins/theme_editor_plugin.cpp
+#, fuzzy
+msgid "Radio Item"
+msgstr "Adicionar Item"
+
+#: editor/plugins/theme_editor_plugin.cpp
+#, fuzzy
+msgid "Checked Radio Item"
+msgstr "Item Checado"
+
+#: editor/plugins/theme_editor_plugin.cpp
 msgid "Has"
 msgstr "Tem"
 
@@ -5703,11 +5737,6 @@ msgstr "Guia 2"
 msgid "Tab 3"
 msgstr "Guia 3"
 
-#: editor/plugins/theme_editor_plugin.cpp editor/project_settings_editor.cpp
-#: editor/scene_tree_editor.cpp editor/script_editor_debugger.cpp
-msgid "Type:"
-msgstr "Tipo:"
-
 #: editor/plugins/theme_editor_plugin.cpp
 msgid "Data Type:"
 msgstr "Tipo de Dados:"
@@ -5726,7 +5755,7 @@ msgstr "Fonte"
 
 #: editor/plugins/theme_editor_plugin.cpp
 msgid "Color"
-msgstr "Cor"
+msgstr "Color"
 
 #: editor/plugins/theme_editor_plugin.cpp
 msgid "Theme"
@@ -5979,11 +6008,6 @@ msgid "Please choose an empty folder."
 msgstr "Por favor, escolha uma pasta vazia."
 
 #: editor/project_manager.cpp
-msgid "Please choose a folder that does not contain a 'project.godot' file."
-msgstr ""
-"Por favor, escolha uma pasta que não contenha um arquivo 'project.godot'."
-
-#: editor/project_manager.cpp
 msgid "Imported Project"
 msgstr "Projeto Importado"
 
@@ -6004,8 +6028,12 @@ msgid "Invalid project path (changed anything?)."
 msgstr "Caminho de projeto inválido (mudou alguma coisa?)."
 
 #: editor/project_manager.cpp
-msgid "Couldn't get project.godot in project path."
-msgstr "Não foi possível encontrar project.godot no caminho do projeto."
+msgid ""
+"Couldn't load project.godot in project path (error %d). It may be missing or "
+"corrupted."
+msgstr ""
+"Não foi possível carregar project.godot no caminho do projeto (erro %d). Ele "
+"pode estar ausente ou corrompido."
 
 #: editor/project_manager.cpp
 msgid "Couldn't edit project.godot in project path."
@@ -6022,10 +6050,6 @@ msgstr "Os arquivos a seguir falharam ao serem extraídos do pacote:"
 #: editor/project_manager.cpp
 msgid "Rename Project"
 msgstr "Renomear Projeto"
-
-#: editor/project_manager.cpp
-msgid "Couldn't get project.godot in the project path."
-msgstr "Não foi possível encontrar project.godot no caminho do projeto."
 
 #: editor/project_manager.cpp
 msgid "New Game Project"
@@ -6187,8 +6211,10 @@ msgid "Mouse Button"
 msgstr "Botão do Mous"
 
 #: editor/project_settings_editor.cpp
-msgid "Invalid action (anything goes but '/' or ':')."
-msgstr "Ação Inválida (qualquer coisa serve, exceto '/' ou ':')."
+msgid ""
+"Invalid action name. it cannot be empty nor contain '/', ':', '=', '\\' or "
+"'\"'"
+msgstr ""
 
 #: editor/project_settings_editor.cpp
 msgid "Action '%s' already exists!"
@@ -6331,10 +6357,6 @@ msgid "Delete Item"
 msgstr "Excluir Item"
 
 #: editor/project_settings_editor.cpp
-msgid "Can't contain '/' or ':'"
-msgstr "Não pode conter '/' ou ':'"
-
-#: editor/project_settings_editor.cpp
 msgid "Already existing"
 msgstr "Já existe"
 
@@ -6448,7 +6470,7 @@ msgstr "Remapeamentos por Localidade:"
 
 #: editor/project_settings_editor.cpp
 msgid "Locale"
-msgstr "Localidade"
+msgstr "Locale"
 
 #: editor/project_settings_editor.cpp
 msgid "Locales Filter"
@@ -6540,7 +6562,7 @@ msgstr "Erro ao carregar arquivo: Não é um recurso!"
 
 #: editor/property_editor.cpp
 msgid "Selected node is not a Viewport!"
-msgstr "Nó selecionado não é uma Viewport!"
+msgstr "O nó selecionado não é uma Viewport!"
 
 #: editor/property_editor.cpp
 msgid "Pick a Node"
@@ -6560,7 +6582,7 @@ msgstr "[Vazio]"
 
 #: editor/property_editor.cpp modules/visual_script/visual_script_editor.cpp
 msgid "Set"
-msgstr "Definir"
+msgstr "Set"
 
 #: editor/property_editor.cpp
 msgid "Properties:"
@@ -6657,7 +6679,7 @@ msgstr "Mover Nó no Pai"
 
 #: editor/scene_tree_dock.cpp
 msgid "Move Nodes In Parent"
-msgstr "Mover Nós no Pai"
+msgstr "Mover Nodes no Pai"
 
 #: editor/scene_tree_dock.cpp
 msgid "Duplicate Node(s)"
@@ -6731,10 +6753,6 @@ msgstr "Sub-Recursos"
 msgid "Clear Inheritance"
 msgstr "Limpar Herança"
 
-#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
-msgid "Open in Editor"
-msgstr "Abrir no Editor"
-
 #: editor/scene_tree_dock.cpp
 msgid "Delete Node(s)"
 msgstr "Excluir Nó(s)"
@@ -6784,8 +6802,8 @@ msgid ""
 "Instance a scene file as a Node. Creates an inherited scene if no root node "
 "exists."
 msgstr ""
-"Instanciar um arquivo de cena como um Nó. Criar uma cena herdada se não "
-"existe um nó raiz."
+"Instanciar um arquivo de cena como um nó. Cria uma cena herdada se não "
+"existir um nó raiz."
 
 #: editor/scene_tree_dock.cpp
 msgid "Filter nodes"
@@ -6852,10 +6870,6 @@ msgstr ""
 "Clique para mostrar o painel de grupos."
 
 #: editor/scene_tree_editor.cpp
-msgid "Instance:"
-msgstr "Instância:"
-
-#: editor/scene_tree_editor.cpp
 msgid "Open script"
 msgstr "Abrir script"
 
@@ -6889,7 +6903,7 @@ msgstr "Renomear Nó"
 
 #: editor/scene_tree_editor.cpp
 msgid "Scene Tree (Nodes):"
-msgstr "Árvore de Cena (Nós):"
+msgstr "Árvore de Cena (Nodes):"
 
 #: editor/scene_tree_editor.cpp
 msgid "Node Configuration Warning!"
@@ -6977,7 +6991,7 @@ msgstr "Carregar arquivo de script existente"
 
 #: editor/script_create_dialog.cpp
 msgid "Language"
-msgstr "Idioma"
+msgstr "Linguagem"
 
 #: editor/script_create_dialog.cpp
 msgid "Inherits"
@@ -7065,7 +7079,7 @@ msgstr "Pilha de Rastreamento (se aplicável):"
 
 #: editor/script_editor_debugger.cpp
 msgid "Profiler"
-msgstr "Profiler"
+msgstr "Profilador"
 
 #: editor/script_editor_debugger.cpp
 msgid "Monitor"
@@ -7089,11 +7103,11 @@ msgstr "Total:"
 
 #: editor/script_editor_debugger.cpp
 msgid "Video Mem"
-msgstr "Memória de Vídeo"
+msgstr "Mem. de Vídeo"
 
 #: editor/script_editor_debugger.cpp
 msgid "Resource Path"
-msgstr "Caminho do recurso"
+msgstr "Caminho do Recurso"
 
 #: editor/script_editor_debugger.cpp
 msgid "Type"
@@ -7284,6 +7298,30 @@ msgid "Object can't provide a length."
 msgstr "Objeto não pôde fornecer um comprimento."
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Next Plane"
+msgstr "Próximo Plano"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Previous Plane"
+msgstr "Plano Anterior"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Plane:"
+msgstr "Plano:"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Next Floor"
+msgstr "Próximo Chão"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Previous Floor"
+msgstr "Chão Anterior"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Floor:"
+msgstr "Chão:"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
 msgid "GridMap Delete Selection"
 msgstr "Excluir Seleção do Gridap"
 
@@ -7292,24 +7330,12 @@ msgid "GridMap Duplicate Selection"
 msgstr "Duplicar Seleção do GridMap"
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
-msgid "Floor:"
-msgstr "Chão:"
-
-#: modules/gridmap/grid_map_editor_plugin.cpp
 msgid "Grid Map"
 msgstr "Mapa de Grade"
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
 msgid "Snap View"
 msgstr "Ancorar Vista"
-
-#: modules/gridmap/grid_map_editor_plugin.cpp
-msgid "Previous Floor"
-msgstr "Chão Anterior"
-
-#: modules/gridmap/grid_map_editor_plugin.cpp
-msgid "Next Floor"
-msgstr "Próximo Chão"
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
 msgid "Clip Disabled"
@@ -7387,6 +7413,10 @@ msgstr "Configurações do GridMap"
 msgid "Pick Distance:"
 msgstr "Escolha uma Distância:"
 
+#: modules/mono/csharp_script.cpp
+msgid "Class name can't be a reserved keyword"
+msgstr ""
+
 #: modules/mono/editor/godotsharp_editor.cpp
 msgid "Generating solution..."
 msgstr "Gerando solução..."
@@ -7416,6 +7446,10 @@ msgid "Mono"
 msgstr "Mono"
 
 #: modules/mono/editor/godotsharp_editor.cpp
+msgid "About C# support"
+msgstr "Sobre o suporte  ao C#"
+
+#: modules/mono/editor/godotsharp_editor.cpp
 msgid "Create C# solution"
 msgstr "Criar solução C#"
 
@@ -7430,6 +7464,10 @@ msgstr "Compilar Projeto"
 #: modules/mono/editor/mono_bottom_panel.cpp
 msgid "Warnings"
 msgstr "Avisos"
+
+#: modules/mono/mono_gd/gd_mono_utils.cpp
+msgid "End of inner exception stack trace"
+msgstr "Fim da pilha de rastreamento de exceção interna"
 
 #: modules/visual_script/visual_script.cpp
 msgid ""
@@ -7453,7 +7491,7 @@ msgid ""
 "your node please."
 msgstr ""
 "Um valor de retorno deve ser atribuído ao primeiro elemento da memória "
-"corrente do nó! Conserte seu node, por favor."
+"corrente do nó! Conserte seu nó, por favor."
 
 #: modules/visual_script/visual_script.cpp
 msgid "Node returned an invalid sequence output: "
@@ -7537,11 +7575,11 @@ msgstr "Adicionar Nó"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Remove VisualScript Nodes"
-msgstr "Remover Nós VisualScript"
+msgstr "Remover Nodes VisualScript"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Duplicate VisualScript Nodes"
-msgstr "Duplicar Nós VisualScript"
+msgstr "Duplicar Nodes VisualScript"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Hold %s to drop a Getter. Hold Shift to drop a generic signature."
@@ -7577,7 +7615,7 @@ msgstr "Adicionar Nó de Pré-carregamento"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Add Node(s) From Tree"
-msgstr "Adicionar Nó(s) a partir de árvore"
+msgstr "Adicionar Nó(s) a Partir da Árvore"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Add Getter Property"
@@ -7601,7 +7639,7 @@ msgstr "Remover Nó VisualScript"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Connect Nodes"
-msgstr "Conectar Nós"
+msgstr "Conectar Nodes"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Condition"
@@ -7609,27 +7647,27 @@ msgstr "Condição"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Sequence"
-msgstr "Sequência"
+msgstr "Sequence"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Switch"
-msgstr "Trocar"
+msgstr "Switch"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Iterator"
-msgstr "Iterador"
+msgstr "Iterator"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "While"
-msgstr "Enquanto"
+msgstr "While"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Return"
-msgstr "Retornar"
+msgstr "Return"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Call"
-msgstr "Chamar"
+msgstr "Call"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Get"
@@ -7653,7 +7691,7 @@ msgstr "Área de transferência vazia!"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Paste VisualScript Nodes"
-msgstr "Colar Nós VisualScript"
+msgstr "Colar Nodes VisualScript"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Remove Function"
@@ -7689,7 +7727,7 @@ msgstr "Tipo de Base:"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Available Nodes:"
-msgstr "Nós Disponíveis:"
+msgstr "Nodes Disponíveis:"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Select or create a function to edit graph"
@@ -7713,15 +7751,15 @@ msgstr "Localizar Tipo de Nó"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Copy Nodes"
-msgstr "Copiar Nós"
+msgstr "Copiar Nodes"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Cut Nodes"
-msgstr "Recortar Nós"
+msgstr "Recortar Nodes"
 
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Paste Nodes"
-msgstr "Colar Nós"
+msgstr "Colar Nodes"
 
 #: modules/visual_script/visual_script_flow_control.cpp
 msgid "Input type not iterable: "
@@ -7741,11 +7779,11 @@ msgstr "Nome da propriedade de índice inválido."
 
 #: modules/visual_script/visual_script_func_nodes.cpp
 msgid "Base object is not a Node!"
-msgstr "Objeto base não é um Node!"
+msgstr "Objeto base não é um nó!"
 
 #: modules/visual_script/visual_script_func_nodes.cpp
 msgid "Path does not lead Node!"
-msgstr "O caminho não leva a um Node!"
+msgstr "O caminho não leva a um nó!"
 
 #: modules/visual_script/visual_script_func_nodes.cpp
 msgid "Invalid index property name '%s' in node %s."
@@ -7985,6 +8023,14 @@ msgid "ARVROrigin requires an ARVRCamera child node"
 msgstr "ARVROrigin necessita um nó ARVRCamera como filho"
 
 #: scene/3d/baked_lightmap.cpp
+msgid "%d%%"
+msgstr "%d%%"
+
+#: scene/3d/baked_lightmap.cpp
+msgid "(Time Left: %d:%02d s)"
+msgstr "(Tempo Restante: %d:%02d s)"
+
+#: scene/3d/baked_lightmap.cpp
 msgid "Plotting Meshes: "
 msgstr "Planejando Malhas: "
 
@@ -8082,11 +8128,21 @@ msgid "Path property must point to a valid Spatial node to work."
 msgstr "A propriedade Caminho deve apontar para um nó Spatial para funcionar."
 
 #: scene/3d/scenario_fx.cpp
+msgid "WorldEnvironment needs an Environment resource."
+msgstr ""
+
+#: scene/3d/scenario_fx.cpp
 msgid ""
 "Only one WorldEnvironment is allowed per scene (or set of instanced scenes)."
 msgstr ""
 "É permitido apenas um nó WorldEnvironment por cena (ou conjunto de cenas "
 "instanciadas)."
+
+#: scene/3d/scenario_fx.cpp
+msgid ""
+"This WorldEnvironment is ignored. Either add a Camera (for 3D scenes) or set "
+"this environment's Background Mode to Canvas (for 2D scenes)."
+msgstr ""
 
 #: scene/3d/sprite_3d.cpp
 msgid ""
@@ -8183,6 +8239,32 @@ msgstr "Erro ao carregar fonte."
 #: scene/resources/dynamic_font.cpp
 msgid "Invalid font size."
 msgstr "Tamanho de fonte inválido."
+
+#~ msgid "Invalid action (anything goes but '/' or ':')."
+#~ msgstr "Ação Inválida (qualquer coisa serve, exceto '/' ou ':')."
+
+#~ msgid "Can't contain '/' or ':'"
+#~ msgstr "Não pode conter '/' ou ':'"
+
+#~ msgid ""
+#~ "Invalid version.txt format inside templates. Revision is not a valid "
+#~ "identifier."
+#~ msgstr ""
+#~ "Formato do version.txt dentro dos modelos é inválido. A revisão não é um "
+#~ "identificador válido."
+
+#~ msgid "Can't write file."
+#~ msgstr "Não foi possível escrever o arquivo."
+
+#~ msgid "Please choose a folder that does not contain a 'project.godot' file."
+#~ msgstr ""
+#~ "Por favor, escolha uma pasta que não contenha um arquivo 'project.godot'."
+
+#~ msgid "Couldn't get project.godot in project path."
+#~ msgstr "Não foi possível encontrar project.godot no caminho do projeto."
+
+#~ msgid "Couldn't get project.godot in the project path."
+#~ msgstr "Não foi possível encontrar project.godot no caminho do projeto."
 
 #~ msgid "Next"
 #~ msgstr "Próximo"

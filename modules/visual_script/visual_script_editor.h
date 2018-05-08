@@ -211,6 +211,7 @@ class VisualScriptEditor : public ScriptEditorBase {
 	String revert_on_drag;
 
 	void _input(const Ref<InputEvent> &p_event);
+	void _members_gui_input(const Ref<InputEvent> &p_event);
 	void _on_nodes_delete();
 	void _on_nodes_duplicate();
 
@@ -245,6 +246,9 @@ protected:
 	static void _bind_methods();
 
 public:
+	virtual void add_syntax_highlighter(SyntaxHighlighter *p_highlighter);
+	virtual void set_syntax_highlighter(SyntaxHighlighter *p_highlighter);
+
 	virtual void apply_code();
 	virtual Ref<Script> get_edited_script() const;
 	virtual Vector<String> get_functions();

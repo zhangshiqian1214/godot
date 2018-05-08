@@ -140,7 +140,6 @@ private:
 		::AABB *_aabb;
 		Basis *_basis;
 		Transform *_transform;
-		RefPtr *_resource;
 		void *_ptr; //generic pointer
 		uint8_t _mem[sizeof(ObjData) > (sizeof(real_t) * 4) ? sizeof(ObjData) : (sizeof(real_t) * 4)];
 	} _data;
@@ -293,7 +292,7 @@ public:
 	// If this changes the table in variant_op must be updated
 	enum Operator {
 
-		//comparation
+		//comparison
 		OP_EQUAL,
 		OP_NOT_EQUAL,
 		OP_LESS,
@@ -338,6 +337,7 @@ public:
 	}
 
 	void zero();
+	Variant duplicate(bool deep = false) const;
 	static void blend(const Variant &a, const Variant &b, float c, Variant &r_dst);
 	static void interpolate(const Variant &a, const Variant &b, float c, Variant &r_dst);
 

@@ -256,8 +256,11 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 
 		String best;
 
-		for (int i = 0; i < translations.size(); i++) {
-			String locale = translations[i]->get_locale();
+		EditorTranslationList *etl = _editor_translations;
+
+		while (etl->data) {
+
+			const String &locale = etl->lang;
 			lang_hint += ",";
 			lang_hint += locale;
 
@@ -268,6 +271,8 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 			if (best == String() && host_lang.begins_with(locale)) {
 				best = locale;
 			}
+
+			etl++;
 		}
 
 		if (best == String()) {
@@ -278,15 +283,23 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 		hints["interface/editor/editor_language"] = PropertyInfo(Variant::STRING, "interface/editor/editor_language", PROPERTY_HINT_ENUM, lang_hint, PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
 	}
 
-	_initial_set("interface/editor/hidpi_mode", 0);
-	hints["interface/editor/hidpi_mode"] = PropertyInfo(Variant::INT, "interface/editor/hidpi_mode", PROPERTY_HINT_ENUM, "Auto,VeryLoDPI,LoDPI,MidDPI,HiDPI", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
+	_initial_set("interface/editor/display_scale", 0);
+	hints["interface/editor/display_scale"] = PropertyInfo(Variant::INT, "interface/editor/display_scale", PROPERTY_HINT_ENUM, "Auto,75%,100%,125%,150%,175%,200%,Custom", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
+	_initial_set("interface/editor/custom_display_scale", 1.0f);
+	hints["interface/editor/custom_display_scale"] = PropertyInfo(Variant::REAL, "interface/editor/custom_display_scale", PROPERTY_HINT_RANGE, "0.75,3,0.01", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
 	_initial_set("interface/scene_tabs/show_script_button", false);
 	_initial_set("interface/editor/main_font_size", 14);
 	hints["interface/editor/main_font_size"] = PropertyInfo(Variant::INT, "interface/editor/main_font_size", PROPERTY_HINT_RANGE, "10,40,1", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
 	_initial_set("interface/editor/code_font_size", 14);
 	hints["interface/editor/code_font_size"] = PropertyInfo(Variant::INT, "interface/editor/code_font_size", PROPERTY_HINT_RANGE, "8,96,1", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
+	_initial_set("interface/editor/main_font_hinting", 2);
+	hints["interface/editor/main_font_hinting"] = PropertyInfo(Variant::INT, "interface/editor/main_font_hinting", PROPERTY_HINT_ENUM, "None,Light,Normal", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
+	_initial_set("interface/editor/code_font_hinting", 2);
+	hints["interface/editor/code_font_hinting"] = PropertyInfo(Variant::INT, "interface/editor/code_font_hinting", PROPERTY_HINT_ENUM, "None,Light,Normal", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
 	_initial_set("interface/editor/main_font", "");
 	hints["interface/editor/main_font"] = PropertyInfo(Variant::STRING, "interface/editor/main_font", PROPERTY_HINT_GLOBAL_FILE, "*.ttf,*.otf", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
+	_initial_set("interface/editor/main__bold_font", "");
+	hints["interface/editor/main_font_bold"] = PropertyInfo(Variant::STRING, "interface/editor/main_bold_font", PROPERTY_HINT_GLOBAL_FILE, "*.ttf,*.otf", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
 	_initial_set("interface/editor/code_font", "");
 	hints["interface/editor/code_font"] = PropertyInfo(Variant::STRING, "interface/editor/code_font", PROPERTY_HINT_GLOBAL_FILE, "*.ttf,*.otf", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
 	_initial_set("interface/editor/dim_editor_on_dialog_popup", true);
@@ -360,7 +373,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("text_editor/line_numbers/code_folding", true);
 	_initial_set("text_editor/line_numbers/show_line_length_guideline", false);
 	_initial_set("text_editor/line_numbers/line_length_guideline_column", 80);
-	hints["text_editor/line_numbers/line_length_guideline_column"] = PropertyInfo(Variant::INT, "text_editor/line_numbers/line_length_guideline_column", PROPERTY_HINT_RANGE, "20, 160, 10");
+	hints["text_editor/line_numbers/line_length_guideline_column"] = PropertyInfo(Variant::INT, "text_editor/line_numbers/line_length_guideline_column", PROPERTY_HINT_RANGE, "20, 160, 1");
 
 	_initial_set("text_editor/open_scripts/smooth_scrolling", true);
 	_initial_set("text_editor/open_scripts/v_scroll_speed", 80);
@@ -374,7 +387,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("text_editor/cursor/block_caret", false);
 	_initial_set("text_editor/cursor/caret_blink", true);
 	_initial_set("text_editor/cursor/caret_blink_speed", 0.65);
-	hints["text_editor/cursor/caret_blink_speed"] = PropertyInfo(Variant::REAL, "text_editor/cursor/caret_blink_speed", PROPERTY_HINT_RANGE, "0.1, 10, 0.1");
+	hints["text_editor/cursor/caret_blink_speed"] = PropertyInfo(Variant::REAL, "text_editor/cursor/caret_blink_speed", PROPERTY_HINT_RANGE, "0.1, 10, 0.01");
 	_initial_set("text_editor/cursor/right_click_moves_caret", true);
 
 	_initial_set("text_editor/completion/auto_brace_complete", false);
@@ -382,8 +395,6 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("text_editor/completion/callhint_tooltip_offset", Vector2());
 	_initial_set("text_editor/files/restore_scripts_on_load", true);
 	_initial_set("text_editor/completion/complete_file_paths", true);
-	_initial_set("text_editor/files/maximum_recent_files", 20);
-	hints["text_editor/files/maximum_recent_files"] = PropertyInfo(Variant::INT, "text_editor/files/maximum_recent_files", PROPERTY_HINT_RANGE, "1, 200, 1");
 
 	_initial_set("docks/scene_tree/start_create_dialog_fully_expanded", false);
 	_initial_set("docks/scene_tree/draw_relationship_lines", false);
@@ -391,8 +402,17 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 
 	_initial_set("editors/grid_map/pick_distance", 5000.0);
 
-	_initial_set("editors/3d/grid_color", Color::html("808080"));
-	hints["editors/3d/grid_color"] = PropertyInfo(Variant::COLOR, "editors/3d/grid_color", PROPERTY_HINT_COLOR_NO_ALPHA, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
+	_initial_set("editors/3d/primary_grid_color", Color::html("909090"));
+	hints["editors/3d/primary_grid_color"] = PropertyInfo(Variant::COLOR, "editors/3d/primary_grid_color", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
+
+	_initial_set("editors/3d/secondary_grid_color", Color::html("606060"));
+	hints["editors/3d/secondary_grid_color"] = PropertyInfo(Variant::COLOR, "editors/3d/secondary_grid_color", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
+
+	_initial_set("editors/3d/grid_size", 50);
+	hints["editors/3d/grid_size"] = PropertyInfo(Variant::INT, "editors/3d/grid_size", PROPERTY_HINT_RANGE, "1,500,1", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
+
+	_initial_set("editors/3d/primary_grid_steps", 10);
+	hints["editors/3d/primary_grid_steps"] = PropertyInfo(Variant::INT, "editors/3d/primary_grid_steps", PROPERTY_HINT_RANGE, "1,100,1", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
 
 	_initial_set("editors/3d/default_fov", 70.0);
 	_initial_set("editors/3d/default_z_near", 0.05);
@@ -400,6 +420,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 
 	// navigation
 	_initial_set("editors/3d/navigation/navigation_scheme", 0);
+	_initial_set("editors/3d/navigation/invert_y-axis", false);
 	hints["editors/3d/navigation/navigation_scheme"] = PropertyInfo(Variant::INT, "editors/3d/navigation/navigation_scheme", PROPERTY_HINT_ENUM, "Godot,Maya,Modo");
 	_initial_set("editors/3d/navigation/zoom_style", 0);
 	hints["editors/3d/navigation/zoom_style"] = PropertyInfo(Variant::INT, "editors/3d/navigation/zoom_style", PROPERTY_HINT_ENUM, "Vertical, Horizontal");
@@ -444,9 +465,11 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("editors/2d/guides_color", Color(0.6, 0.0, 0.8));
 	_initial_set("editors/2d/bone_width", 5);
 	_initial_set("editors/2d/bone_color1", Color(1.0, 1.0, 1.0, 0.9));
-	_initial_set("editors/2d/bone_color2", Color(0.75, 0.75, 0.75, 0.9));
+	_initial_set("editors/2d/bone_color2", Color(0.6, 0.6, 0.6, 0.9));
 	_initial_set("editors/2d/bone_selected_color", Color(0.9, 0.45, 0.45, 0.9));
 	_initial_set("editors/2d/bone_ik_color", Color(0.9, 0.9, 0.45, 0.9));
+	_initial_set("editors/2d/bone_outline_color", Color(0.35, 0.35, 0.35));
+	_initial_set("editors/2d/bone_outline_size", 2);
 	_initial_set("editors/2d/keep_margins_when_changing_anchors", false);
 	_initial_set("editors/2d/warped_mouse_panning", true);
 	_initial_set("editors/2d/simple_spacebar_panning", false);
@@ -885,11 +908,29 @@ void EditorSettings::setup_language() {
 	if (lang == "en")
 		return; //none to do
 
-	for (int i = 0; i < translations.size(); i++) {
-		if (translations[i]->get_locale() == lang) {
-			TranslationServer::get_singleton()->set_tool_translation(translations[i]);
-			break;
+	EditorTranslationList *etl = _editor_translations;
+
+	while (etl->data) {
+
+		if (etl->lang == lang) {
+
+			Vector<uint8_t> data;
+			data.resize(etl->uncomp_size);
+			Compression::decompress(data.ptrw(), etl->uncomp_size, etl->data, etl->comp_size, Compression::MODE_DEFLATE);
+
+			FileAccessMemory *fa = memnew(FileAccessMemory);
+			fa->open_custom(data.ptr(), data.size());
+
+			Ref<Translation> tr = TranslationLoaderPO::load_translation(fa, NULL, "translation_" + String(etl->lang));
+
+			if (tr.is_valid()) {
+				tr->set_locale(etl->lang);
+				TranslationServer::get_singleton()->set_tool_translation(tr);
+				break;
+			}
 		}
+
+		etl++;
 	}
 }
 
@@ -938,11 +979,8 @@ void EditorSettings::save() {
 	Error err = ResourceSaver::save(singleton->config_file_path, singleton);
 
 	if (err != OK) {
-		ERR_PRINT("Can't Save!");
-		return;
-	}
-
-	if (OS::get_singleton()->is_stdout_verbose()) {
+		ERR_PRINTS("Error saving editor settings to " + singleton->config_file_path);
+	} else if (OS::get_singleton()->is_stdout_verbose()) {
 		print_line("EditorSettings Save OK!");
 	}
 }
@@ -1458,27 +1496,6 @@ EditorSettings::EditorSettings() {
 	last_order = 0;
 	optimize_save = true;
 	save_changed_setting = true;
-
-	EditorTranslationList *etl = _editor_translations;
-
-	while (etl->data) {
-
-		Vector<uint8_t> data;
-		data.resize(etl->uncomp_size);
-		Compression::decompress(data.ptrw(), etl->uncomp_size, etl->data, etl->comp_size, Compression::MODE_DEFLATE);
-
-		FileAccessMemory *fa = memnew(FileAccessMemory);
-		fa->open_custom(data.ptr(), data.size());
-
-		Ref<Translation> tr = TranslationLoaderPO::load_translation(fa, NULL, "translation_" + String(etl->lang));
-
-		if (tr.is_valid()) {
-			tr->set_locale(etl->lang);
-			translations.push_back(tr);
-		}
-
-		etl++;
-	}
 
 	_load_defaults();
 }

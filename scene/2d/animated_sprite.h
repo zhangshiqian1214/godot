@@ -129,6 +129,7 @@ class AnimatedSprite : public Node2D {
 	bool playing;
 	StringName animation;
 	int frame;
+	float speed_scale;
 
 	bool centered;
 	Point2 offset;
@@ -150,9 +151,14 @@ protected:
 	virtual void _validate_property(PropertyInfo &property) const;
 
 public:
+	virtual Dictionary _edit_get_state() const;
+	virtual void _edit_set_state(const Dictionary &p_state);
+
 	virtual void _edit_set_pivot(const Point2 &p_pivot);
 	virtual Point2 _edit_get_pivot() const;
 	virtual bool _edit_use_pivot() const;
+	virtual Rect2 _edit_get_rect() const;
+	virtual bool _edit_use_rect() const;
 
 	void set_sprite_frames(const Ref<SpriteFrames> &p_frames);
 	Ref<SpriteFrames> get_sprite_frames() const;
@@ -166,6 +172,9 @@ public:
 
 	void set_frame(int p_frame);
 	int get_frame() const;
+
+	void set_speed_scale(float p_speed_scale);
+	float get_speed_scale() const;
 
 	void set_centered(bool p_center);
 	bool is_centered() const;
@@ -181,8 +190,6 @@ public:
 
 	void set_modulate(const Color &p_color);
 	Color get_modulate() const;
-
-	virtual Rect2 _edit_get_rect() const;
 
 	virtual String get_configuration_warning() const;
 	AnimatedSprite();

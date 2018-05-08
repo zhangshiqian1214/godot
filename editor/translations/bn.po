@@ -1428,6 +1428,10 @@ msgstr "পরিস্কার করুন/ক্লীয়ার"
 msgid "Clear Output"
 msgstr "আউটপুট/ফলাফল"
 
+#: editor/editor_node.cpp
+msgid "Project export failed with error code %d."
+msgstr ""
+
 #: editor/editor_node.cpp editor/plugins/animation_player_editor_plugin.cpp
 msgid "Error saving resource!"
 msgstr "রিসোর্স সংরক্ষণে সমস্যা হয়েছে!"
@@ -2519,13 +2523,6 @@ msgid "Invalid version.txt format inside templates."
 msgstr "টেমপ্লেট এর version.txt ফরম্যাট গ্রহণযোগ্য নয়।"
 
 #: editor/export_template_manager.cpp
-msgid ""
-"Invalid version.txt format inside templates. Revision is not a valid "
-"identifier."
-msgstr ""
-"টেমপ্লেট এর version.txt ফরম্যাট অগ্রহণযোগ্য। Revision কোন কাংখিত আইডেন্টিফায়ার নয়।"
-
-#: editor/export_template_manager.cpp
 msgid "No version.txt found inside templates."
 msgstr "টেমপ্লেটে version.txt খুঁজে পাওয়া যায়নি।"
 
@@ -2582,11 +2579,6 @@ msgstr "লুপ পুনঃনির্দেশ করুন।"
 #: editor/plugins/asset_library_editor_plugin.cpp
 msgid "Failed:"
 msgstr "ব্যর্থ:"
-
-#: editor/export_template_manager.cpp
-#, fuzzy
-msgid "Can't write file."
-msgstr "টাইলটি খুঁজে পাওয়া যায়নি:"
 
 #: editor/export_template_manager.cpp
 #, fuzzy
@@ -3839,18 +3831,28 @@ msgstr "গ্রিড দেখান"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
 #, fuzzy
-msgid "Show helpers"
+msgid "Show Helpers"
 msgstr "বোন্‌/হাড় দেখান"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
 #, fuzzy
-msgid "Show rulers"
+msgid "Show Rulers"
 msgstr "বোন্‌/হাড় দেখান"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
 #, fuzzy
-msgid "Show guides"
+msgid "Show Guides"
 msgstr "বোন্‌/হাড় দেখান"
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+#, fuzzy
+msgid "Show Origin"
+msgstr "অরিজিন দেখুন"
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+#, fuzzy
+msgid "Show Viewport"
+msgstr "১ টি Viewport"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
 msgid "Center Selection"
@@ -4153,6 +4155,10 @@ msgstr "MeshInstance-এ Mesh নেই!"
 #: editor/plugins/mesh_instance_editor_plugin.cpp
 msgid "Mesh has not surface to create outlines from!"
 msgstr "প্রান্তরেখা তৈরি করার জন্য প্রয়োজনীয় Mesh এর কোনো পৃষ্ঠতল নেই!"
+
+#: editor/plugins/mesh_instance_editor_plugin.cpp
+msgid "Mesh primitive type is not PRIMITIVE_TRIANGLES!"
+msgstr ""
 
 #: editor/plugins/mesh_instance_editor_plugin.cpp
 msgid "Could not create outline!"
@@ -4719,6 +4725,22 @@ msgid "Resource clipboard is empty!"
 msgstr "রিসোর্সের ক্লীপবোর্ড খালি!"
 
 #: editor/plugins/resource_preloader_editor_plugin.cpp
+#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
+msgid "Open in Editor"
+msgstr "এডিটরে খুলুন"
+
+#: editor/plugins/resource_preloader_editor_plugin.cpp
+#: editor/scene_tree_editor.cpp
+msgid "Instance:"
+msgstr "ইন্সট্যান্স:"
+
+#: editor/plugins/resource_preloader_editor_plugin.cpp
+#: editor/plugins/theme_editor_plugin.cpp editor/project_settings_editor.cpp
+#: editor/scene_tree_editor.cpp editor/script_editor_debugger.cpp
+msgid "Type:"
+msgstr "ধরণ:"
+
+#: editor/plugins/resource_preloader_editor_plugin.cpp
 #: editor/plugins/sprite_frames_editor_plugin.cpp
 msgid "Load Resource"
 msgstr "রিসোর্স লোড করুন"
@@ -5017,10 +5039,6 @@ msgid "Toggle Comment"
 msgstr "কমেন্ট টগল করুন"
 
 #: editor/plugins/script_text_editor.cpp
-msgid "Clone Down"
-msgstr "ক্লোন করে নীচে নিন"
-
-#: editor/plugins/script_text_editor.cpp
 #, fuzzy
 msgid "Fold/Unfold Line"
 msgstr "লাইন আনফোল্ড করুন"
@@ -5032,6 +5050,10 @@ msgstr "সবগুলি লাইন ফোল্ড করুন"
 #: editor/plugins/script_text_editor.cpp
 msgid "Unfold All Lines"
 msgstr "সবগুলি লাইন আনফোল্ড করুন"
+
+#: editor/plugins/script_text_editor.cpp
+msgid "Clone Down"
+msgstr "ক্লোন করে নীচে নিন"
 
 #: editor/plugins/script_text_editor.cpp
 msgid "Complete Symbol"
@@ -5881,6 +5903,16 @@ msgid "Checked Item"
 msgstr "চিহ্নিত আইটেম"
 
 #: editor/plugins/theme_editor_plugin.cpp
+#, fuzzy
+msgid "Radio Item"
+msgstr "বস্তু যোগ করুন"
+
+#: editor/plugins/theme_editor_plugin.cpp
+#, fuzzy
+msgid "Checked Radio Item"
+msgstr "চিহ্নিত আইটেম"
+
+#: editor/plugins/theme_editor_plugin.cpp
 msgid "Has"
 msgstr "আছে"
 
@@ -5907,11 +5939,6 @@ msgstr "ট্যাব ২"
 #: editor/plugins/theme_editor_plugin.cpp
 msgid "Tab 3"
 msgstr "ট্যাব ৩"
-
-#: editor/plugins/theme_editor_plugin.cpp editor/project_settings_editor.cpp
-#: editor/scene_tree_editor.cpp editor/script_editor_debugger.cpp
-msgid "Type:"
-msgstr "ধরণ:"
 
 #: editor/plugins/theme_editor_plugin.cpp
 msgid "Data Type:"
@@ -6204,10 +6231,6 @@ msgid "Please choose an empty folder."
 msgstr "অনুগ্রহ করে প্রকল্পের ফোল্ডারের বাইরে এক্সপোর্ট করুন!"
 
 #: editor/project_manager.cpp
-msgid "Please choose a folder that does not contain a 'project.godot' file."
-msgstr "এমন একটি ফোল্ডার বাছাই করুন যেখানে 'project.godot' নামে কোন ফাইল নেই।"
-
-#: editor/project_manager.cpp
 msgid "Imported Project"
 msgstr "প্রকল্প ইম্পোর্ট করা হয়েছে"
 
@@ -6230,7 +6253,9 @@ msgstr "অকার্যকর প্রকল্পের পথ (কোন�
 
 #: editor/project_manager.cpp
 #, fuzzy
-msgid "Couldn't get project.godot in project path."
+msgid ""
+"Couldn't load project.godot in project path (error %d). It may be missing or "
+"corrupted."
 msgstr "প্রকল্পের পথে engine.cfg তৈরি করা সম্ভব হয়নি।"
 
 #: editor/project_manager.cpp
@@ -6251,11 +6276,6 @@ msgstr "প্যাকেজ হতে নীম্নোক্ত ফাইল
 #, fuzzy
 msgid "Rename Project"
 msgstr "নামহীন প্রকল্প"
-
-#: editor/project_manager.cpp
-#, fuzzy
-msgid "Couldn't get project.godot in the project path."
-msgstr "প্রকল্পের পথে engine.cfg তৈরি করা সম্ভব হয়নি।"
 
 #: editor/project_manager.cpp
 msgid "New Game Project"
@@ -6423,8 +6443,10 @@ msgid "Mouse Button"
 msgstr "মাউসের বোতাম"
 
 #: editor/project_settings_editor.cpp
-msgid "Invalid action (anything goes but '/' or ':')."
-msgstr "অকার্যকর অ্যাকশন ('/' বা ':' ছাড়া কিছুই যাবে না)।"
+msgid ""
+"Invalid action name. it cannot be empty nor contain '/', ':', '=', '\\' or "
+"'\"'"
+msgstr ""
 
 #: editor/project_settings_editor.cpp
 msgid "Action '%s' already exists!"
@@ -6572,11 +6594,6 @@ msgstr "'% s' সেটিংটি অভ্যন্তরীণ, এবং �
 #, fuzzy
 msgid "Delete Item"
 msgstr "ইনপুট অপসারণ করুন"
-
-#: editor/project_settings_editor.cpp
-#, fuzzy
-msgid "Can't contain '/' or ':'"
-msgstr "নোডের সাথে সংযুক্ত করুন:"
 
 #: editor/project_settings_editor.cpp
 #, fuzzy
@@ -6992,10 +7009,6 @@ msgstr "রিসোর্সসমূহ:"
 msgid "Clear Inheritance"
 msgstr "উত্তরাধিকারত্ব পরিস্কার করুন"
 
-#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
-msgid "Open in Editor"
-msgstr "এডিটরে খুলুন"
-
 #: editor/scene_tree_dock.cpp
 msgid "Delete Node(s)"
 msgstr "নোড(সমূহ) অপসারণ করুন"
@@ -7115,10 +7128,6 @@ msgid ""
 msgstr ""
 "এই নোডটি একটি গ্রুপের অন্তর্ভুক্ত।\n"
 "গ্রুপ ডক প্রদর্শন করতে ক্লিক করুন।"
-
-#: editor/scene_tree_editor.cpp
-msgid "Instance:"
-msgstr "ইন্সট্যান্স:"
 
 #: editor/scene_tree_editor.cpp
 #, fuzzy
@@ -7570,6 +7579,33 @@ msgstr ""
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
 #, fuzzy
+msgid "Next Plane"
+msgstr "পরের ট্যাব"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+#, fuzzy
+msgid "Previous Plane"
+msgstr "পূর্বের ট্যাব"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Plane:"
+msgstr ""
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Next Floor"
+msgstr ""
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+#, fuzzy
+msgid "Previous Floor"
+msgstr "পূর্বের ট্যাব"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Floor:"
+msgstr ""
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+#, fuzzy
 msgid "GridMap Delete Selection"
 msgstr "নির্বাচিত সমূহ অপসারণ করুন"
 
@@ -7577,10 +7613,6 @@ msgstr "নির্বাচিত সমূহ অপসারণ করুন
 #, fuzzy
 msgid "GridMap Duplicate Selection"
 msgstr "নির্বাচিত সমূহ অনুলিপি করুন"
-
-#: modules/gridmap/grid_map_editor_plugin.cpp
-msgid "Floor:"
-msgstr ""
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
 #, fuzzy
@@ -7591,15 +7623,6 @@ msgstr "গ্রিড স্ন্যাপ"
 #, fuzzy
 msgid "Snap View"
 msgstr "শীর্ষ দর্শন"
-
-#: modules/gridmap/grid_map_editor_plugin.cpp
-#, fuzzy
-msgid "Previous Floor"
-msgstr "পূর্বের ট্যাব"
-
-#: modules/gridmap/grid_map_editor_plugin.cpp
-msgid "Next Floor"
-msgstr ""
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
 #, fuzzy
@@ -7687,6 +7710,10 @@ msgstr "স্ন্যাপ সেটিংস"
 msgid "Pick Distance:"
 msgstr "ইন্সট্যান্স:"
 
+#: modules/mono/csharp_script.cpp
+msgid "Class name can't be a reserved keyword"
+msgstr ""
+
 #: modules/mono/editor/godotsharp_editor.cpp
 #, fuzzy
 msgid "Generating solution..."
@@ -7721,6 +7748,10 @@ msgid "Mono"
 msgstr "মনো"
 
 #: modules/mono/editor/godotsharp_editor.cpp
+msgid "About C# support"
+msgstr ""
+
+#: modules/mono/editor/godotsharp_editor.cpp
 #, fuzzy
 msgid "Create C# solution"
 msgstr "প্রান্তরেখা তৈরি করুন"
@@ -7738,6 +7769,10 @@ msgstr "নতুন প্রকল্প"
 #, fuzzy
 msgid "Warnings"
 msgstr "সতর্কতা"
+
+#: modules/mono/mono_gd/gd_mono_utils.cpp
+msgid "End of inner exception stack trace"
+msgstr ""
 
 #: modules/visual_script/visual_script.cpp
 msgid ""
@@ -8301,6 +8336,14 @@ msgid "ARVROrigin requires an ARVRCamera child node"
 msgstr ""
 
 #: scene/3d/baked_lightmap.cpp
+msgid "%d%%"
+msgstr ""
+
+#: scene/3d/baked_lightmap.cpp
+msgid "(Time Left: %d:%02d s)"
+msgstr ""
+
+#: scene/3d/baked_lightmap.cpp
 #, fuzzy
 msgid "Plotting Meshes: "
 msgstr "ছবিসমূহ ব্লিটিং (Blitting) করা হচ্ছে"
@@ -8394,11 +8437,21 @@ msgid "Path property must point to a valid Spatial node to work."
 msgstr "Path এর দিক অবশ্যই একটি কার্যকর Spatial নোডের এর দিকে নির্দেশ করাতে হবে।"
 
 #: scene/3d/scenario_fx.cpp
+msgid "WorldEnvironment needs an Environment resource."
+msgstr ""
+
+#: scene/3d/scenario_fx.cpp
 msgid ""
 "Only one WorldEnvironment is allowed per scene (or set of instanced scenes)."
 msgstr ""
 "প্রতি দৃশ্যে (অথবা ইন্সট্যান্সড দৃশ্যের সম্মেলনে) সর্বোচ্চ একটি দৃশ্যমান WorldEnvironment "
 "সম্ভব।"
+
+#: scene/3d/scenario_fx.cpp
+msgid ""
+"This WorldEnvironment is ignored. Either add a Camera (for 3D scenes) or set "
+"this environment's Background Mode to Canvas (for 2D scenes)."
+msgstr ""
 
 #: scene/3d/sprite_3d.cpp
 msgid ""
@@ -8490,6 +8543,35 @@ msgstr "ফন্ট তুলতে/লোডে সমস্যা হয়ে�
 #: scene/resources/dynamic_font.cpp
 msgid "Invalid font size."
 msgstr "ফন্টের আকার অগ্রহনযোগ্য।"
+
+#~ msgid "Invalid action (anything goes but '/' or ':')."
+#~ msgstr "অকার্যকর অ্যাকশন ('/' বা ':' ছাড়া কিছুই যাবে না)।"
+
+#, fuzzy
+#~ msgid "Can't contain '/' or ':'"
+#~ msgstr "নোডের সাথে সংযুক্ত করুন:"
+
+#~ msgid ""
+#~ "Invalid version.txt format inside templates. Revision is not a valid "
+#~ "identifier."
+#~ msgstr ""
+#~ "টেমপ্লেট এর version.txt ফরম্যাট অগ্রহণযোগ্য। Revision কোন কাংখিত আইডেন্টিফায়ার "
+#~ "নয়।"
+
+#, fuzzy
+#~ msgid "Can't write file."
+#~ msgstr "টাইলটি খুঁজে পাওয়া যায়নি:"
+
+#~ msgid "Please choose a folder that does not contain a 'project.godot' file."
+#~ msgstr "এমন একটি ফোল্ডার বাছাই করুন যেখানে 'project.godot' নামে কোন ফাইল নেই।"
+
+#, fuzzy
+#~ msgid "Couldn't get project.godot in project path."
+#~ msgstr "প্রকল্পের পথে engine.cfg তৈরি করা সম্ভব হয়নি।"
+
+#, fuzzy
+#~ msgid "Couldn't get project.godot in the project path."
+#~ msgstr "প্রকল্পের পথে engine.cfg তৈরি করা সম্ভব হয়নি।"
 
 #~ msgid "Next"
 #~ msgstr "পরবর্তী"

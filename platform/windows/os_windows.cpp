@@ -30,6 +30,7 @@
 
 #include "os_windows.h"
 
+#include "drivers/gles2/rasterizer_gles2.h"
 #include "drivers/gles3/rasterizer_gles3.h"
 #include "drivers/windows/dir_access_windows.h"
 #include "drivers/windows/file_access_windows.h"
@@ -151,24 +152,23 @@ void RedirectIOToConsole() {
 	// point to console as well
 }
 
-int OS_Windows::get_video_driver_count() const {
+BOOL WINAPI HandlerRoutine(_In_ DWORD dwCtrlType) {
+	if (ScriptDebugger::get_singleton() == NULL)
+		return FALSE;
 
-	return 1;
+	switch (dwCtrlType) {
+		case CTRL_C_EVENT:
+			ScriptDebugger::get_singleton()->set_depth(-1);
+			ScriptDebugger::get_singleton()->set_lines_left(1);
+			return TRUE;
+		default:
+			return FALSE;
+	}
 }
-const char *OS_Windows::get_video_driver_name(int p_driver) const {
 
-	return "GLES3";
-}
+void OS_Windows::initialize_debugging() {
 
-int OS_Windows::get_audio_driver_count() const {
-
-	return AudioDriverManager::get_driver_count();
-}
-const char *OS_Windows::get_audio_driver_name(int p_driver) const {
-
-	AudioDriver *driver = AudioDriverManager::get_driver(p_driver);
-	ERR_FAIL_COND_V(!driver, "");
-	return AudioDriverManager::get_driver(p_driver)->get_name();
+	SetConsoleCtrlHandler(HandlerRoutine, TRUE);
 }
 
 void OS_Windows::initialize_core() {
@@ -206,6 +206,10 @@ void OS_Windows::initialize_core() {
 	// the start of the computer when we call GetGameTime()
 	ticks_start = 0;
 	ticks_start = get_ticks_usec();
+
+	// set minimum resolution for periodic timers, otherwise Sleep(n) may wait at least as
+	//  long as the windows scheduler resolution (~16-30ms) even for calls like Sleep(1)
+	timeBeginPeriod(1);
 
 	process_map = memnew((Map<ProcessID, ProcessInfo>));
 
@@ -361,6 +365,14 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 		} break;
 		case WM_MOUSEMOVE: {
 
+			if (input->is_emulating_mouse_from_touch()) {
+				// Universal translation enabled; ignore OS translation
+				LPARAM extra = GetMessageExtraInfo();
+				if (IsPenEvent(extra)) {
+					break;
+				}
+			}
+
 			if (outside) {
 				//mouse enter
 
@@ -386,18 +398,6 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			// Don't calculate relative mouse movement if we don't have focus in CAPTURED mode.
 			if (!window_has_focus && mouse_mode == MOUSE_MODE_CAPTURED)
 				break;
-			/*
-			LPARAM extra = GetMessageExtraInfo();
-			if (IsPenEvent(extra)) {
-
-				int idx = extra & 0x7f;
-				_drag_event(idx, uMsg, wParam, lParam);
-				if (idx != 0) {
-					return 0;
-				};
-				// fallthrough for mouse event
-			};
-			*/
 
 			Ref<InputEventMouseMotion> mm;
 			mm.instance();
@@ -467,18 +467,13 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			/*case WM_XBUTTONDOWN:
 		case WM_XBUTTONUP: */ {
 
-				/*
-			LPARAM extra = GetMessageExtraInfo();
-			if (IsPenEvent(extra)) {
-
-				int idx = extra & 0x7f;
-				_touch_event(idx, uMsg, wParam, lParam);
-				if (idx != 0) {
-					return 0;
-				};
-				// fallthrough for mouse event
-			};
-			*/
+				if (input->is_emulating_mouse_from_touch()) {
+					// Universal translation enabled; ignore OS translation
+					LPARAM extra = GetMessageExtraInfo();
+					if (IsPenEvent(extra)) {
+						break;
+					}
+				}
 
 				Ref<InputEventMouseButton> mb;
 				mb.instance();
@@ -632,7 +627,16 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 				video_mode.width = window_w;
 				video_mode.height = window_h;
 			}
-			//return 0;								// Jump Back
+			if (wParam == SIZE_MAXIMIZED) {
+				maximized = true;
+				minimized = false;
+			} else if (wParam == SIZE_MINIMIZED) {
+				maximized = false;
+				minimized = true;
+			} else if (wParam == SIZE_RESTORED) {
+				maximized = false;
+				minimized = false;
+			}
 		} break;
 
 		case WM_ENTERSIZEMOVE: {
@@ -1075,13 +1079,24 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 		}
 	};
 
+	if (video_mode.always_on_top) {
+		SetWindowPos(hWnd, video_mode.always_on_top ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	}
+
 #if defined(OPENGL_ENABLED)
-	gl_context = memnew(ContextGL_Win(hWnd, true));
-	gl_context->initialize();
+	if (p_video_driver == VIDEO_DRIVER_GLES2) {
+		gl_context = memnew(ContextGL_Win(hWnd, false));
+		gl_context->initialize();
 
-	RasterizerGLES3::register_config();
+		RasterizerGLES2::register_config();
+		RasterizerGLES2::make_current();
+	} else {
+		gl_context = memnew(ContextGL_Win(hWnd, true));
+		gl_context->initialize();
 
-	RasterizerGLES3::make_current();
+		RasterizerGLES3::register_config();
+		RasterizerGLES3::make_current();
+	}
 
 	gl_context->set_use_vsync(video_mode.use_vsync);
 #endif
@@ -1260,6 +1275,8 @@ void OS_Windows::finalize() {
 
 void OS_Windows::finalize_core() {
 
+	timeEndPeriod(1);
+
 	memdelete(process_map);
 
 	TCPServerWinsock::cleanup();
@@ -1298,7 +1315,9 @@ void OS_Windows::set_mouse_mode(MouseMode p_mode) {
 	if (p_mode == MOUSE_MODE_CAPTURED || p_mode == MOUSE_MODE_HIDDEN) {
 		hCursor = SetCursor(NULL);
 	} else {
-		SetCursor(hCursor);
+		CursorShape c = cursor_shape;
+		cursor_shape = CURSOR_MAX;
+		set_cursor_shape(c);
 	}
 }
 
@@ -1487,6 +1506,12 @@ Size2 OS_Windows::get_window_size() const {
 	GetClientRect(hWnd, &r);
 	return Vector2(r.right - r.left, r.bottom - r.top);
 }
+Size2 OS_Windows::get_real_window_size() const {
+
+	RECT r;
+	GetWindowRect(hWnd, &r);
+	return Vector2(r.right - r.left, r.bottom - r.top);
+}
 void OS_Windows::set_window_size(const Size2 p_size) {
 
 	video_mode.width = p_size.width;
@@ -1608,6 +1633,19 @@ bool OS_Windows::is_window_maximized() const {
 	return maximized;
 }
 
+void OS_Windows::set_window_always_on_top(bool p_enabled) {
+	if (video_mode.always_on_top == p_enabled)
+		return;
+
+	video_mode.always_on_top = p_enabled;
+
+	_update_window_style();
+}
+
+bool OS_Windows::is_window_always_on_top() const {
+	return video_mode.always_on_top;
+}
+
 void OS_Windows::set_borderless_window(bool p_borderless) {
 	if (video_mode.borderless_window == p_borderless)
 		return;
@@ -1631,6 +1669,8 @@ void OS_Windows::_update_window_style(bool repaint) {
 			SetWindowLongPtr(hWnd, GWL_STYLE, WS_CAPTION | WS_MINIMIZEBOX | WS_POPUPWINDOW | WS_VISIBLE);
 		}
 	}
+
+	SetWindowPos(hWnd, video_mode.always_on_top ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
 	if (repaint) {
 		RECT rect;
@@ -1841,6 +1881,11 @@ void OS_Windows::set_cursor_shape(CursorShape p_shape) {
 	if (cursor_shape == p_shape)
 		return;
 
+	if (mouse_mode != MOUSE_MODE_VISIBLE) {
+		cursor_shape = p_shape;
+		return;
+	}
+
 	static const LPCTSTR win_cursors[CURSOR_MAX] = {
 		IDC_ARROW,
 		IDC_IBEAM,
@@ -1866,6 +1911,7 @@ void OS_Windows::set_cursor_shape(CursorShape p_shape) {
 	} else {
 		SetCursor(LoadCursor(hInstance, win_cursors[p_shape]));
 	}
+
 	cursor_shape = p_shape;
 }
 
@@ -1874,26 +1920,25 @@ void OS_Windows::set_custom_mouse_cursor(const RES &p_cursor, CursorShape p_shap
 		Ref<Texture> texture = p_cursor;
 		Ref<Image> image = texture->get_data();
 
-		UINT image_size = 32 * 32;
+		UINT image_size = texture->get_width() * texture->get_height();
 		UINT size = sizeof(UINT) * image_size;
 
-		ERR_FAIL_COND(texture->get_width() != 32 || texture->get_height() != 32);
+		ERR_FAIL_COND(texture->get_width() > 256 || texture->get_height() > 256);
 
 		// Create the BITMAP with alpha channel
 		COLORREF *buffer = (COLORREF *)malloc(sizeof(COLORREF) * image_size);
 
 		image->lock();
 		for (UINT index = 0; index < image_size; index++) {
-			int column_index = floor(index / 32);
-			int row_index = index % 32;
+			int row_index = floor(index / texture->get_width());
+			int column_index = index % texture->get_width();
 
-			Color pcColor = image->get_pixel(row_index, column_index);
-			*(buffer + index) = image->get_pixel(row_index, column_index).to_argb32();
+			*(buffer + index) = image->get_pixel(column_index, row_index).to_argb32();
 		}
 		image->unlock();
 
 		// Using 4 channels, so 4 * 8 bits
-		HBITMAP bitmap = CreateBitmap(32, 32, 1, 4 * 8, buffer);
+		HBITMAP bitmap = CreateBitmap(texture->get_width(), texture->get_height(), 1, 4 * 8, buffer);
 		COLORREF clrTransparent = -1;
 
 		// Create the AND and XOR masks for the bitmap
@@ -2440,6 +2485,24 @@ String OS_Windows::get_user_data_dir() const {
 	}
 
 	return ProjectSettings::get_singleton()->get_resource_path();
+}
+
+String OS_Windows::get_unique_id() const {
+
+	HW_PROFILE_INFO HwProfInfo;
+	ERR_FAIL_COND_V(!GetCurrentHwProfile(&HwProfInfo), "");
+	return String(HwProfInfo.szHwProfileGuid);
+}
+
+void OS_Windows::set_ime_position(const Point2 &p_pos) {
+
+	HIMC himc = ImmGetContext(hWnd);
+	COMPOSITIONFORM cps;
+	cps.dwStyle = CFS_FORCE_POSITION;
+	cps.ptCurrentPos.x = p_pos.x;
+	cps.ptCurrentPos.y = p_pos.y;
+	ImmSetCompositionWindow(himc, &cps);
+	ImmReleaseContext(hWnd, himc);
 }
 
 bool OS_Windows::is_joy_known(int p_device) {

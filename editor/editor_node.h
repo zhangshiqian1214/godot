@@ -141,6 +141,7 @@ private:
 		EDIT_REDO,
 		EDIT_REVERT,
 		TOOLS_ORPHAN_RESOURCES,
+		TOOLS_CUSTOM,
 		RESOURCE_NEW,
 		RESOURCE_LOAD,
 		RESOURCE_SAVE,
@@ -426,6 +427,7 @@ private:
 	void _menu_option(int p_option);
 	void _menu_confirm_current();
 	void _menu_option_confirm(int p_option, bool p_confirmed);
+	void _tool_menu_option(int p_idx);
 	void _update_debug_options();
 
 	void _property_editor_forward();
@@ -496,6 +498,7 @@ private:
 	Set<EditorFileDialog *> editor_file_dialogs;
 
 	Map<String, Ref<Texture> > icon_type_cache;
+	void _build_icon_type_cache();
 
 	bool _initializing_addons;
 	Map<String, EditorPlugin *> plugin_addons;
@@ -566,6 +569,7 @@ private:
 	void _save_docks_to_config(Ref<ConfigFile> p_layout, const String &p_section);
 	void _load_docks_from_config(Ref<ConfigFile> p_layout, const String &p_section);
 	void _update_dock_slots_visibility();
+	void _dock_tab_changed(int p_tab);
 
 	bool restoring_scenes;
 	void _save_open_scenes_to_config(Ref<ConfigFile> p_layout, const String &p_section);
@@ -596,24 +600,8 @@ private:
 	static EditorPluginInitializeCallback plugin_init_callbacks[MAX_INIT_CALLBACKS];
 	void _save_default_environment();
 
-	bool _call_build();
 	static int build_callback_count;
 	static EditorBuildCallback build_callbacks[MAX_BUILD_CALLBACKS];
-
-	bool _initializing_tool_menu;
-
-	struct ToolMenuItem {
-		String name;
-		String submenu;
-		Variant ud;
-		ObjectID handler;
-		String callback;
-	};
-
-	Vector<ToolMenuItem> tool_menu_items;
-
-	void _tool_menu_insert_item(const ToolMenuItem &p_item);
-	void _rebuild_tool_menu() const;
 
 	bool _dimming;
 	float _dim_time;
@@ -634,6 +622,8 @@ protected:
 	static void _bind_methods();
 
 public:
+	bool call_build();
+
 	static void add_plugin_init_callback(EditorPluginInitializeCallback p_callback);
 
 	enum EditorTable {
@@ -652,6 +642,8 @@ public:
 	EditorPluginList *get_editor_plugins_force_input_forwarding() { return editor_plugins_force_input_forwarding; }
 	PropertyEditor *get_property_editor() { return property_editor; }
 	VBoxContainer *get_property_editor_vb() { return prop_editor_vb; }
+
+	ProjectSettingsEditor *get_project_settings() { return project_settings; }
 
 	static void add_editor_plugin(EditorPlugin *p_editor);
 	static void remove_editor_plugin(EditorPlugin *p_editor);

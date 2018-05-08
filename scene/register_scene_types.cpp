@@ -46,6 +46,7 @@
 #include "scene/2d/light_2d.h"
 #include "scene/2d/light_occluder_2d.h"
 #include "scene/2d/line_2d.h"
+#include "scene/2d/mesh_instance_2d.h"
 #include "scene/2d/navigation2d.h"
 #include "scene/2d/parallax_background.h"
 #include "scene/2d/parallax_layer.h"
@@ -57,6 +58,7 @@
 #include "scene/2d/ray_cast_2d.h"
 #include "scene/2d/remote_transform_2d.h"
 #include "scene/2d/screen_button.h"
+#include "scene/2d/skeleton_2d.h"
 #include "scene/2d/sprite.h"
 #include "scene/2d/tile_map.h"
 #include "scene/2d/visibility_notifier_2d.h"
@@ -388,6 +390,7 @@ void register_scene_types() {
 	ClassDB::register_class<RigidBody>();
 	ClassDB::register_class<KinematicCollision>();
 	ClassDB::register_class<KinematicBody>();
+	ClassDB::register_class<PhysicalBone>();
 
 	ClassDB::register_class<VehicleBody>();
 	ClassDB::register_class<VehicleWheel>();
@@ -434,6 +437,7 @@ void register_scene_types() {
 	ClassDB::register_class<AnimatedSprite>();
 	ClassDB::register_class<Position2D>();
 	ClassDB::register_class<Line2D>();
+	ClassDB::register_class<MeshInstance2D>();
 	ClassDB::register_virtual_class<CollisionObject2D>();
 	ClassDB::register_virtual_class<PhysicsBody2D>();
 	ClassDB::register_class<StaticBody2D>();
@@ -447,6 +451,8 @@ void register_scene_types() {
 	ClassDB::register_class<VisibilityNotifier2D>();
 	ClassDB::register_class<VisibilityEnabler2D>();
 	ClassDB::register_class<Polygon2D>();
+	ClassDB::register_class<Skeleton2D>();
+	ClassDB::register_class<Bone2D>();
 	ClassDB::register_class<Light2D>();
 	ClassDB::register_class<LightOccluder2D>();
 	ClassDB::register_class<OccluderPolygon2D>();

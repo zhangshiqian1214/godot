@@ -67,7 +67,7 @@ class ProjectSettingsEditor : public AcceptDialog {
 	SectionedPropertyEditor *globals_editor;
 
 	HBoxContainer *search_bar;
-	ToolButton *search_button;
+	Button *search_button;
 	LineEdit *search_box;
 	ToolButton *clear_button;
 
@@ -80,9 +80,11 @@ class ProjectSettingsEditor : public AcceptDialog {
 	ConfirmationDialog *press_a_key;
 	Label *press_a_key_label;
 	ConfirmationDialog *device_input;
-	SpinBox *device_id;
+	OptionButton *device_id;
 	OptionButton *device_index;
 	Label *device_index_label;
+	SpinBox *device_special_value;
+	Label *device_special_value_label;
 	MenuButton *popup_copy_to_feature;
 
 	LineEdit *action_name;
@@ -170,11 +172,17 @@ protected:
 	void _notification(int p_what);
 	static void _bind_methods();
 
+	int _get_current_device();
+	void _set_current_device(int i_device);
+	String _get_device_string(int i_device);
+
 public:
 	void add_translation(const String &p_translation);
 	static ProjectSettingsEditor *get_singleton() { return singleton; }
 	void popup_project_settings();
 	void set_plugins_page();
+
+	EditorAutoloadSettings *get_autoload_settings() { return autoload_settings; }
 
 	TabContainer *get_tabs();
 

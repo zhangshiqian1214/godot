@@ -84,6 +84,7 @@ public:
 	FUNCRID(texture)
 	FUNC5(texture_allocate, RID, int, int, Image::Format, uint32_t)
 	FUNC3(texture_set_data, RID, const Ref<Image> &, CubeMapSide)
+	FUNC10(texture_set_data_partial, RID, const Ref<Image> &, int, int, int, int, int, int, int, CubeMapSide)
 	FUNC2RC(Ref<Image>, texture_get_data, RID, CubeMapSide)
 	FUNC2(texture_set_flags, RID, uint32_t)
 	FUNC1RC(uint32_t, texture_get_flags, RID)
@@ -221,6 +222,7 @@ public:
 	FUNC2RC(Transform, skeleton_bone_get_transform, RID, int)
 	FUNC3(skeleton_bone_set_transform_2d, RID, int, const Transform2D &)
 	FUNC2RC(Transform2D, skeleton_bone_get_transform_2d, RID, int)
+	FUNC2(skeleton_set_base_transform_2d, RID, const Transform2D &)
 
 	/* Light API */
 
@@ -377,6 +379,7 @@ public:
 	FUNC2(viewport_set_hide_canvas, RID, bool)
 	FUNC2(viewport_set_disable_environment, RID, bool)
 	FUNC2(viewport_set_disable_3d, RID, bool)
+	FUNC2(viewport_set_keep_3d_linear, RID, bool)
 
 	FUNC2(viewport_attach_camera, RID, RID)
 	FUNC2(viewport_set_scenario, RID, RID)
@@ -498,9 +501,9 @@ public:
 	FUNC11(canvas_item_add_nine_patch, RID, const Rect2 &, const Rect2 &, RID, const Vector2 &, const Vector2 &, NinePatchAxisMode, NinePatchAxisMode, bool, const Color &, RID)
 	FUNC7(canvas_item_add_primitive, RID, const Vector<Point2> &, const Vector<Color> &, const Vector<Point2> &, RID, float, RID)
 	FUNC7(canvas_item_add_polygon, RID, const Vector<Point2> &, const Vector<Color> &, const Vector<Point2> &, RID, RID, bool)
-	FUNC8(canvas_item_add_triangle_array, RID, const Vector<int> &, const Vector<Point2> &, const Vector<Color> &, const Vector<Point2> &, RID, int, RID)
-	FUNC3(canvas_item_add_mesh, RID, const RID &, RID)
-	FUNC3(canvas_item_add_multimesh, RID, RID, RID)
+	FUNC10(canvas_item_add_triangle_array, RID, const Vector<int> &, const Vector<Point2> &, const Vector<Color> &, const Vector<Point2> &, const Vector<int> &, const Vector<float> &, RID, int, RID)
+	FUNC4(canvas_item_add_mesh, RID, const RID &, RID, RID)
+	FUNC4(canvas_item_add_multimesh, RID, RID, RID, RID)
 	FUNC6(canvas_item_add_particles, RID, RID, RID, RID, int, int)
 	FUNC2(canvas_item_add_set_transform, RID, const Transform2D &)
 	FUNC2(canvas_item_add_clip_ignore, RID, bool)
@@ -508,6 +511,7 @@ public:
 	FUNC2(canvas_item_set_z_index, RID, int)
 	FUNC2(canvas_item_set_z_as_relative_to_parent, RID, bool)
 	FUNC3(canvas_item_set_copy_to_backbuffer, RID, bool, const Rect2 &)
+	FUNC2(canvas_item_attach_skeleton, RID, RID)
 
 	FUNC1(canvas_item_clear, RID)
 	FUNC2(canvas_item_set_draw_index, RID, int)

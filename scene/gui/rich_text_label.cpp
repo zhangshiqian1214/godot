@@ -90,7 +90,7 @@ Rect2 RichTextLabel::_get_text_rect() {
 	Ref<StyleBox> style = get_stylebox("normal");
 	return Rect2(style->get_offset(), get_size() - style->get_minimum_size());
 }
-int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &y, int p_width, int p_line, ProcessMode p_mode, const Ref<Font> &p_base_font, const Color &p_base_color, const Point2i &p_click_pos, Item **r_click_item, int *r_click_char, bool *r_outside, int p_char_count) {
+int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &y, int p_width, int p_line, ProcessMode p_mode, const Ref<Font> &p_base_font, const Color &p_base_color, const Color &p_font_color_shadow, bool p_shadow_as_outline, const Point2 &shadow_ofs, const Point2i &p_click_pos, Item **r_click_item, int *r_click_char, bool *r_outside, int p_char_count) {
 
 	RID ci;
 	if (r_outside)
@@ -121,8 +121,11 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 	if (p_mode == PROCESS_CACHE) {
 		l.offset_caches.clear();
 		l.height_caches.clear();
+		l.ascent_caches.clear();
+		l.descent_caches.clear();
 		l.char_count = 0;
 		l.minimum_width = 0;
+		l.maximum_width = 0;
 	}
 
 	int wofs = margin;
@@ -140,6 +143,8 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 
 	//line height should be the font height for the first time, this ensures that an empty line will never have zero height and successive newlines are displayed
 	int line_height = cfont->get_height();
+	int line_ascent = cfont->get_ascent();
+	int line_descent = cfont->get_descent();
 
 	int nonblank_line_count = 0; //number of nonblank lines as counted during PROCESS_DRAW
 
@@ -169,16 +174,22 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 				case ALIGN_FILL: l.offset_caches.push_back((p_width - margin) - used /*+spaces_size*/); break;                                                  \
 			}                                                                                                                                                   \
 			l.height_caches.push_back(line_height);                                                                                                             \
+			l.ascent_caches.push_back(line_ascent);                                                                                                             \
+			l.descent_caches.push_back(line_descent);                                                                                                           \
 			l.space_caches.push_back(spaces);                                                                                                                   \
 		}                                                                                                                                                       \
 		y += line_height + get_constant(SceneStringNames::get_singleton()->line_separation);                                                                    \
 		line_height = 0;                                                                                                                                        \
+		line_ascent = 0;                                                                                                                                        \
+		line_descent = 0;                                                                                                                                       \
 		spaces = 0;                                                                                                                                             \
 		spaces_size = 0;                                                                                                                                        \
 		wofs = begin;                                                                                                                                           \
 		align_ofs = 0;                                                                                                                                          \
 		if (p_mode != PROCESS_CACHE) {                                                                                                                          \
 			lh = line < l.height_caches.size() ? l.height_caches[line] : 1;                                                                                     \
+			line_ascent = line < l.ascent_caches.size() ? l.ascent_caches[line] : 1;                                                                            \
+			line_descent = line < l.descent_caches.size() ? l.descent_caches[line] : 1;                                                                         \
 		}                                                                                                                                                       \
 		if (p_mode == PROCESS_POINTER && r_click_item && p_click_pos.y >= p_ofs.y + y && p_click_pos.y <= p_ofs.y + y + lh && p_click_pos.x < p_ofs.x + wofs) { \
 			if (r_outside) *r_outside = true;                                                                                                                   \
@@ -190,7 +201,8 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 
 #define ENSURE_WIDTH(m_width)                                                                                                                                   \
 	if (p_mode == PROCESS_CACHE) {                                                                                                                              \
-		l.minimum_width = MAX(l.minimum_width, wofs + m_width);                                                                                                 \
+		l.maximum_width = MAX(l.maximum_width, MIN(p_width, wofs + m_width));                                                                                   \
+		l.minimum_width = MAX(l.minimum_width, m_width);                                                                                                        \
 	}                                                                                                                                                           \
 	if (wofs + m_width > p_width) {                                                                                                                             \
 		if (p_mode == PROCESS_CACHE) {                                                                                                                          \
@@ -237,6 +249,7 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 	int rchar = 0;
 	int lh = 0;
 	bool line_is_blank = true;
+	int fh = 0;
 
 	while (it) {
 
@@ -252,13 +265,16 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 
 				const CharType *c = text->text.c_str();
 				const CharType *cf = c;
-				int fh = font->get_height();
 				int ascent = font->get_ascent();
+				int descent = font->get_descent();
+
 				Color color;
+				Color font_color_shadow;
 				bool underline = false;
 
 				if (p_mode == PROCESS_DRAW) {
 					color = _find_color(text, p_base_color);
+					font_color_shadow = _find_color(text, p_font_color_shadow);
 					underline = _find_underline(text);
 					if (_find_meta(text, &meta)) {
 
@@ -270,7 +286,6 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 				}
 
 				rchar = 0;
-
 				while (*c) {
 
 					int end = 0;
@@ -280,8 +295,9 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 					lh = 0;
 					if (p_mode != PROCESS_CACHE) {
 						lh = line < l.height_caches.size() ? l.height_caches[line] : 1;
+						line_ascent = line < l.ascent_caches.size() ? l.ascent_caches[line] : 1;
+						line_descent = line < l.descent_caches.size() ? l.descent_caches[line] : 1;
 					}
-
 					while (c[end] != 0 && !(end && c[end - 1] == ' ' && c[end] != ' ')) {
 
 						int cw = font->get_char_size(c[end], c[end + 1]).width;
@@ -298,8 +314,12 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 
 						end++;
 					}
-
+					CHECK_HEIGHT(fh);
 					ENSURE_WIDTH(w);
+
+					line_ascent = MAX(line_ascent, ascent);
+					line_descent = MAX(line_descent, descent);
+					fh = line_ascent + line_descent;
 
 					if (end && c[end - 1] == ' ') {
 						if (p_mode == PROCESS_CACHE) {
@@ -348,23 +368,37 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 
 								int cw = 0;
 
-								bool visible = visible_characters < 0 || p_char_count < visible_characters && YRANGE_VISIBLE(y + lh - (fh - 0 * ascent), fh); //getting rid of ascent seems to work??
+								bool visible = visible_characters < 0 || p_char_count < visible_characters && YRANGE_VISIBLE(y + lh - line_descent - line_ascent, line_ascent + line_descent);
 								if (visible)
 									line_is_blank = false;
 
 								if (c[i] == '\t')
 									visible = false;
 
-								if (selected) {
+								if (visible) {
+									if (selected) {
+										cw = font->get_char_size(c[i], c[i + 1]).x;
+										draw_rect(Rect2(p_ofs.x + pofs, p_ofs.y + y, cw, lh), selection_bg);
+									}
 
-									cw = font->get_char_size(c[i], c[i + 1]).x;
-									draw_rect(Rect2(p_ofs.x + pofs, p_ofs.y + y, cw, lh), selection_bg);
-									if (visible)
-										font->draw_char(ci, p_ofs + Point2(align_ofs + pofs, y + lh - (fh - ascent)), c[i], c[i + 1], override_selected_font_color ? selection_fg : color);
+									if (p_font_color_shadow.a > 0) {
+										float x_ofs_shadow = align_ofs + pofs;
+										float y_ofs_shadow = y + lh - line_descent;
+										float move = font->draw_char(ci, Point2(x_ofs_shadow, y_ofs_shadow) + shadow_ofs, c[i], c[i + 1], p_font_color_shadow);
 
-								} else {
-									if (visible)
-										cw = font->draw_char(ci, p_ofs + Point2(align_ofs + pofs, y + lh - (fh - ascent)), c[i], c[i + 1], color);
+										if (p_shadow_as_outline) {
+											font->draw_char(ci, Point2(x_ofs_shadow, y_ofs_shadow) + Vector2(-shadow_ofs.x, shadow_ofs.y), c[i], c[i + 1], p_font_color_shadow);
+											font->draw_char(ci, Point2(x_ofs_shadow, y_ofs_shadow) + Vector2(shadow_ofs.x, -shadow_ofs.y), c[i], c[i + 1], p_font_color_shadow);
+											font->draw_char(ci, Point2(x_ofs_shadow, y_ofs_shadow) + Vector2(-shadow_ofs.x, -shadow_ofs.y), c[i], c[i + 1], p_font_color_shadow);
+										}
+										x_ofs_shadow += move;
+									}
+
+									if (selected) {
+										font->draw_char(ci, p_ofs + Point2(align_ofs + pofs, y + lh - line_descent), c[i], c[i + 1], override_selected_font_color ? selection_fg : color);
+									} else {
+										cw = font->draw_char(ci, p_ofs + Point2(align_ofs + pofs, y + lh - line_descent), c[i], c[i + 1], color);
+									}
 								}
 
 								p_char_count++;
@@ -379,7 +413,7 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 						if (underline) {
 							Color uc = color;
 							uc.a *= 0.5;
-							int uy = y + lh - fh + ascent + 2;
+							int uy = y + lh - line_descent + 2;
 							float underline_width = 1.0;
 #ifdef TOOLS_ENABLED
 							underline_width *= EDSCALE;
@@ -443,6 +477,9 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 				int vseparation = get_constant("table_vseparation");
 				Color ccolor = _find_color(table, p_base_color);
 				Vector2 draw_ofs = Point2(wofs, y);
+				Color font_color_shadow = get_color("font_color_shadow");
+				bool use_outline = get_constant("shadow_as_outline");
+				Point2 shadow_ofs(get_constant("shadow_offset_x"), get_constant("shadow_offset_y"));
 
 				if (p_mode == PROCESS_CACHE) {
 
@@ -450,6 +487,7 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 					//set minimums to zero
 					for (int i = 0; i < table->columns.size(); i++) {
 						table->columns[i].min_width = 0;
+						table->columns[i].max_width = 0;
 						table->columns[i].width = 0;
 					}
 					//compute minimum width for each cell
@@ -465,8 +503,9 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 
 						for (int i = 0; i < frame->lines.size(); i++) {
 
-							_process_line(frame, Point2(), ly, available_width, i, PROCESS_CACHE, cfont, Color());
+							_process_line(frame, Point2(), ly, available_width, i, PROCESS_CACHE, cfont, Color(), font_color_shadow, use_outline, shadow_ofs);
 							table->columns[column].min_width = MAX(table->columns[column].min_width, frame->lines[i].minimum_width);
+							table->columns[column].max_width = MAX(table->columns[column].max_width, frame->lines[i].maximum_width);
 						}
 						idx++;
 					}
@@ -479,17 +518,51 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 
 					for (int i = 0; i < table->columns.size(); i++) {
 						remaining_width -= table->columns[i].min_width;
+						if (table->columns[i].max_width > table->columns[i].min_width)
+							table->columns[i].expand = true;
 						if (table->columns[i].expand)
 							total_ratio += table->columns[i].expand_ratio;
 					}
 
 					//assign actual widths
-
 					for (int i = 0; i < table->columns.size(); i++) {
 						table->columns[i].width = table->columns[i].min_width;
 						if (table->columns[i].expand)
 							table->columns[i].width += table->columns[i].expand_ratio * remaining_width / total_ratio;
 						table->total_width += table->columns[i].width + hseparation;
+					}
+
+					//resize to max_width if needed and distribute the remaining space
+					bool table_need_fit = true;
+					while (table_need_fit) {
+						table_need_fit = false;
+						//fit slim
+						for (int i = 0; i < table->columns.size(); i++) {
+							if (!table->columns[i].expand)
+								continue;
+							int dif = table->columns[i].width - table->columns[i].max_width;
+							if (dif > 0) {
+								table_need_fit = true;
+								table->columns[i].width = table->columns[i].max_width;
+								table->total_width -= dif;
+								total_ratio -= table->columns[i].expand_ratio;
+							}
+						}
+						//grow
+						remaining_width = available_width - table->total_width;
+						if (remaining_width > 0 && total_ratio > 0) {
+							for (int i = 0; i < table->columns.size(); i++) {
+								if (table->columns[i].expand) {
+									int dif = table->columns[i].max_width - table->columns[i].width;
+									if (dif > 0) {
+										int slice = table->columns[i].expand_ratio * remaining_width / total_ratio;
+										int incr = MIN(dif, slice);
+										table->columns[i].width += incr;
+										table->total_width += incr;
+									}
+								}
+							}
+						}
 					}
 
 					//compute caches properly again with the right width
@@ -503,7 +576,7 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 						for (int i = 0; i < frame->lines.size(); i++) {
 
 							int ly = 0;
-							_process_line(frame, Point2(), ly, table->columns[column].width, i, PROCESS_CACHE, cfont, Color());
+							_process_line(frame, Point2(), ly, table->columns[column].width, i, PROCESS_CACHE, cfont, Color(), font_color_shadow, use_outline, shadow_ofs);
 							frame->lines[i].height_cache = ly; //actual height
 							frame->lines[i].height_accum_cache = ly; //actual height
 						}
@@ -536,9 +609,9 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 
 						if (visible) {
 							if (p_mode == PROCESS_DRAW) {
-								nonblank_line_count += _process_line(frame, p_ofs + offset + draw_ofs + Vector2(0, yofs), ly, table->columns[column].width, i, PROCESS_DRAW, cfont, ccolor);
+								nonblank_line_count += _process_line(frame, p_ofs + offset + draw_ofs + Vector2(0, yofs), ly, table->columns[column].width, i, PROCESS_DRAW, cfont, ccolor, font_color_shadow, use_outline, shadow_ofs);
 							} else if (p_mode == PROCESS_POINTER) {
-								_process_line(frame, p_ofs + offset + draw_ofs + Vector2(0, yofs), ly, table->columns[column].width, i, PROCESS_POINTER, cfont, ccolor, p_click_pos, r_click_item, r_click_char, r_outside);
+								_process_line(frame, p_ofs + offset + draw_ofs + Vector2(0, yofs), ly, table->columns[column].width, i, PROCESS_POINTER, cfont, ccolor, font_color_shadow, use_outline, shadow_ofs, p_click_pos, r_click_item, r_click_char, r_outside);
 								if (r_click_item && *r_click_item) {
 									RETURN; // exit early
 								}
@@ -619,9 +692,7 @@ void RichTextLabel::_scroll_changed(double) {
 
 void RichTextLabel::_update_scroll() {
 
-	int total_height = 0;
-	if (main->lines.size())
-		total_height = main->lines[main->lines.size() - 1].height_accum_cache + get_stylebox("normal")->get_minimum_size().height;
+	int total_height = get_content_height();
 
 	bool exceeds = total_height > get_size().height && scroll_active;
 
@@ -710,12 +781,18 @@ void RichTextLabel::_notification(int p_what) {
 			int y = (main->lines[from_line].height_accum_cache - main->lines[from_line].height_cache) - ofs;
 			Ref<Font> base_font = get_font("normal_font");
 			Color base_color = get_color("default_color");
+			Color font_color_shadow = get_color("font_color_shadow");
+			bool use_outline = get_constant("shadow_as_outline");
+			Point2 shadow_ofs(get_constant("shadow_offset_x"), get_constant("shadow_offset_y"));
+
+			float x_ofs = 0;
 
 			visible_line_count = 0;
 			while (y < size.height && from_line < main->lines.size()) {
 
-				visible_line_count += _process_line(main, text_rect.get_position(), y, text_rect.get_size().width - scroll_w, from_line, PROCESS_DRAW, base_font, base_color, Point2i(), NULL, NULL, NULL, total_chars);
+				visible_line_count += _process_line(main, text_rect.get_position(), y, text_rect.get_size().width - scroll_w, from_line, PROCESS_DRAW, base_font, base_color, font_color_shadow, use_outline, shadow_ofs, Point2i(), NULL, NULL, NULL, total_chars);
 				total_chars += main->lines[from_line].char_count;
+
 				from_line++;
 			}
 		}
@@ -730,6 +807,9 @@ void RichTextLabel::_find_click(ItemFrame *p_frame, const Point2i &p_click, Item
 	Size2 size = get_size();
 	Rect2 text_rect = _get_text_rect();
 	int ofs = vscroll->get_value();
+	Color font_color_shadow = get_color("font_color_shadow");
+	bool use_outline = get_constant("shadow_as_outline");
+	Point2 shadow_ofs(get_constant("shadow_offset_x"), get_constant("shadow_offset_y"));
 
 	//todo, change to binary search
 	int from_line = 0;
@@ -750,7 +830,7 @@ void RichTextLabel::_find_click(ItemFrame *p_frame, const Point2i &p_click, Item
 
 	while (y < text_rect.get_size().height && from_line < p_frame->lines.size()) {
 
-		_process_line(p_frame, text_rect.get_position(), y, text_rect.get_size().width - scroll_w, from_line, PROCESS_POINTER, base_font, base_color, p_click, r_click_item, r_click_char, r_outside);
+		_process_line(p_frame, text_rect.get_position(), y, text_rect.get_size().width - scroll_w, from_line, PROCESS_POINTER, base_font, base_color, font_color_shadow, use_outline, shadow_ofs, p_click, r_click_item, r_click_char, r_outside);
 		if (r_click_item && *r_click_item)
 			return;
 		from_line++;
@@ -810,9 +890,9 @@ void RichTextLabel::_gui_input(Ref<InputEvent> p_event) {
 							// Erase previous selection.
 							if (selection.active) {
 								selection.from = NULL;
-								selection.from_char = NULL;
+								selection.from_char = '\0';
 								selection.to = NULL;
-								selection.to_char = NULL;
+								selection.to_char = '\0';
 								selection.active = false;
 
 								update();
@@ -1125,13 +1205,16 @@ void RichTextLabel::_validate_line_caches(ItemFrame *p_frame) {
 	//validate invalid lines
 	Size2 size = get_size();
 	Rect2 text_rect = _get_text_rect();
+	Color font_color_shadow = get_color("font_color_shadow");
+	bool use_outline = get_constant("shadow_as_outline");
+	Point2 shadow_ofs(get_constant("shadow_offset_x"), get_constant("shadow_offset_y"));
 
 	Ref<Font> base_font = get_font("normal_font");
 
 	for (int i = p_frame->first_invalid_line; i < p_frame->lines.size(); i++) {
 
 		int y = 0;
-		_process_line(p_frame, text_rect.get_position(), y, text_rect.get_size().width - scroll_w, i, PROCESS_CACHE, base_font, Color());
+		_process_line(p_frame, text_rect.get_position(), y, text_rect.get_size().width - scroll_w, i, PROCESS_CACHE, base_font, Color(), font_color_shadow, use_outline, shadow_ofs);
 		p_frame->lines[i].height_cache = y;
 		p_frame->lines[i].height_accum_cache = y;
 
@@ -1614,7 +1697,7 @@ Error RichTextLabel::append_bbcode(const String &p_bbcode) {
 			tag_stack.push_front(tag);
 		} else if (tag.begins_with("cell=")) {
 
-			int ratio = tag.substr(6, tag.length()).to_int();
+			int ratio = tag.substr(5, tag.length()).to_int();
 			if (ratio < 1)
 				ratio = 1;
 			//use monospace font
@@ -1973,6 +2056,13 @@ float RichTextLabel::get_percent_visible() const {
 	return percent_visible;
 }
 
+int RichTextLabel::get_content_height() {
+	int total_height = 0;
+	if (main->lines.size())
+		total_height = main->lines[main->lines.size() - 1].height_accum_cache + get_stylebox("normal")->get_minimum_size().height;
+	return total_height;
+}
+
 void RichTextLabel::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("_gui_input"), &RichTextLabel::_gui_input);
@@ -2038,6 +2128,8 @@ void RichTextLabel::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_line_count"), &RichTextLabel::get_line_count);
 	ClassDB::bind_method(D_METHOD("get_visible_line_count"), &RichTextLabel::get_visible_line_count);
+
+	ClassDB::bind_method(D_METHOD("get_content_height"), &RichTextLabel::get_content_height);
 
 	ADD_GROUP("BBCode", "bbcode_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "bbcode_enabled"), "set_use_bbcode", "is_using_bbcode");

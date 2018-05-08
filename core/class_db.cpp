@@ -33,17 +33,8 @@
 #include "os/mutex.h"
 #include "version.h"
 
-#ifdef NO_THREADS
-
-#define OBJTYPE_RLOCK
-#define OBJTYPE_WLOCK
-
-#else
-
 #define OBJTYPE_RLOCK RWLockRead _rw_lockr_(lock);
 #define OBJTYPE_WLOCK RWLockWrite _rw_lockw_(lock);
-
-#endif
 
 #ifdef DEBUG_METHODS_ENABLED
 
@@ -207,6 +198,47 @@ MethodDefinition D_METHOD(const char *p_name, const char *p_arg1, const char *p_
 	return md;
 }
 
+MethodDefinition D_METHOD(const char *p_name, const char *p_arg1, const char *p_arg2, const char *p_arg3, const char *p_arg4, const char *p_arg5, const char *p_arg6, const char *p_arg7, const char *p_arg8, const char *p_arg9, const char *p_arg10, const char *p_arg11, const char *p_arg12) {
+
+	MethodDefinition md;
+	md.name = StaticCString::create(p_name);
+	md.args.resize(12);
+	md.args[0] = StaticCString::create(p_arg1);
+	md.args[1] = StaticCString::create(p_arg2);
+	md.args[2] = StaticCString::create(p_arg3);
+	md.args[3] = StaticCString::create(p_arg4);
+	md.args[4] = StaticCString::create(p_arg5);
+	md.args[5] = StaticCString::create(p_arg6);
+	md.args[6] = StaticCString::create(p_arg7);
+	md.args[7] = StaticCString::create(p_arg8);
+	md.args[8] = StaticCString::create(p_arg9);
+	md.args[9] = StaticCString::create(p_arg10);
+	md.args[10] = StaticCString::create(p_arg11);
+	md.args[11] = StaticCString::create(p_arg12);
+	return md;
+}
+
+MethodDefinition D_METHOD(const char *p_name, const char *p_arg1, const char *p_arg2, const char *p_arg3, const char *p_arg4, const char *p_arg5, const char *p_arg6, const char *p_arg7, const char *p_arg8, const char *p_arg9, const char *p_arg10, const char *p_arg11, const char *p_arg12, const char *p_arg13) {
+
+	MethodDefinition md;
+	md.name = StaticCString::create(p_name);
+	md.args.resize(13);
+	md.args[0] = StaticCString::create(p_arg1);
+	md.args[1] = StaticCString::create(p_arg2);
+	md.args[2] = StaticCString::create(p_arg3);
+	md.args[3] = StaticCString::create(p_arg4);
+	md.args[4] = StaticCString::create(p_arg5);
+	md.args[5] = StaticCString::create(p_arg6);
+	md.args[6] = StaticCString::create(p_arg7);
+	md.args[7] = StaticCString::create(p_arg8);
+	md.args[8] = StaticCString::create(p_arg9);
+	md.args[9] = StaticCString::create(p_arg10);
+	md.args[10] = StaticCString::create(p_arg11);
+	md.args[11] = StaticCString::create(p_arg12);
+	md.args[12] = StaticCString::create(p_arg13);
+	return md;
+}
+
 #endif
 
 ClassDB::APIType ClassDB::current_api = API_CORE;
@@ -222,11 +254,13 @@ HashMap<StringName, StringName, StringNameHasher> ClassDB::compat_classes;
 
 ClassDB::ClassInfo::ClassInfo() {
 
+	api = API_NONE;
 	creation_func = NULL;
 	inherits_ptr = NULL;
 	disabled = false;
 	exposed = false;
 }
+
 ClassDB::ClassInfo::~ClassInfo() {
 }
 
@@ -306,7 +340,7 @@ uint64_t ClassDB::get_api_hash(APIType p_api) {
 	OBJTYPE_RLOCK;
 #ifdef DEBUG_METHODS_ENABLED
 
-	uint64_t hash = hash_djb2_one_64(HashMapHasherDefault::hash(VERSION_FULL_NAME));
+	uint64_t hash = hash_djb2_one_64(HashMapHasherDefault::hash(VERSION_FULL_CONFIG));
 
 	List<StringName> names;
 
@@ -323,7 +357,7 @@ uint64_t ClassDB::get_api_hash(APIType p_api) {
 
 		ClassInfo *t = classes.getptr(E->get());
 		ERR_FAIL_COND_V(!t, 0);
-		if (t->api != p_api)
+		if (t->api != p_api || !t->exposed)
 			continue;
 		hash = hash_djb2_one_64(t->name.hash(), hash);
 		hash = hash_djb2_one_64(t->inherits.hash(), hash);
@@ -619,7 +653,6 @@ void ClassDB::bind_integer_constant(const StringName &p_class, const StringName 
 	}
 
 	type->constant_map[p_name] = p_constant;
-#ifdef DEBUG_METHODS_ENABLED
 
 	String enum_name = p_enum;
 	if (enum_name != String()) {
@@ -638,6 +671,7 @@ void ClassDB::bind_integer_constant(const StringName &p_class, const StringName 
 		}
 	}
 
+#ifdef DEBUG_METHODS_ENABLED
 	type->constant_order.push_back(p_name);
 #endif
 }
@@ -693,7 +727,6 @@ int ClassDB::get_integer_constant(const StringName &p_class, const StringName &p
 	return 0;
 }
 
-#ifdef DEBUG_METHODS_ENABLED
 StringName ClassDB::get_integer_constant_enum(const StringName &p_class, const StringName &p_name, bool p_no_inheritance) {
 
 	OBJTYPE_RLOCK;
@@ -762,7 +795,6 @@ void ClassDB::get_enum_constants(const StringName &p_class, const StringName &p_
 		type = type->inherits_ptr;
 	}
 }
-#endif
 
 void ClassDB::add_signal(StringName p_class, const MethodInfo &p_signal) {
 
@@ -854,15 +886,9 @@ void ClassDB::add_property_group(StringName p_class, const String &p_name, const
 
 void ClassDB::add_property(StringName p_class, const PropertyInfo &p_pinfo, const StringName &p_setter, const StringName &p_getter, int p_index) {
 
-#ifndef NO_THREADS
 	lock->read_lock();
-#endif
-
 	ClassInfo *type = classes.getptr(p_class);
-
-#ifndef NO_THREADS
 	lock->read_unlock();
-#endif
 
 	ERR_FAIL_COND(!type);
 
@@ -1339,10 +1365,7 @@ RWLock *ClassDB::lock = NULL;
 
 void ClassDB::init() {
 
-#ifndef NO_THREADS
-
 	lock = RWLock::create();
-#endif
 }
 
 void ClassDB::cleanup() {
@@ -1365,10 +1388,7 @@ void ClassDB::cleanup() {
 	resource_base_extensions.clear();
 	compat_classes.clear();
 
-#ifndef NO_THREADS
-
 	memdelete(lock);
-#endif
 }
 
 //

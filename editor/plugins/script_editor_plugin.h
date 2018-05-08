@@ -80,6 +80,9 @@ protected:
 	static void _bind_methods();
 
 public:
+	virtual void add_syntax_highlighter(SyntaxHighlighter *p_highlighter) = 0;
+	virtual void set_syntax_highlighter(SyntaxHighlighter *p_highlighter) = 0;
+
 	virtual void apply_code() = 0;
 	virtual Ref<Script> get_edited_script() const = 0;
 	virtual Vector<String> get_functions() = 0;
@@ -112,9 +115,12 @@ public:
 	ScriptEditorBase() {}
 };
 
+typedef SyntaxHighlighter *(*CreateSyntaxHighlighterFunc)();
 typedef ScriptEditorBase *(*CreateScriptEditorFunc)(const Ref<Script> &p_script);
 
 class EditorScriptCodeCompletionCache;
+class FindInFilesDialog;
+class FindInFilesPanel;
 
 class ScriptEditor : public PanelContainer {
 
@@ -165,6 +171,7 @@ class ScriptEditor : public PanelContainer {
 	enum ScriptSortBy {
 		SORT_BY_NAME,
 		SORT_BY_PATH,
+		SORT_BY_NONE
 	};
 
 	enum ScriptListName {
@@ -198,6 +205,7 @@ class ScriptEditor : public PanelContainer {
 	VSplitContainer *list_split;
 	TabContainer *tab_container;
 	EditorFileDialog *file_dialog;
+	AcceptDialog *error_dialog;
 	ConfirmationDialog *erase_tab_confirm;
 	ScriptCreateDialog *script_create_dialog;
 	ScriptEditorDebugger *debugger;
@@ -211,12 +219,20 @@ class ScriptEditor : public PanelContainer {
 	ToolButton *script_back;
 	ToolButton *script_forward;
 
+	FindInFilesDialog *find_in_files_dialog;
+	FindInFilesPanel *find_in_files;
+	Button *find_in_files_button;
+
 	enum {
-		SCRIPT_EDITOR_FUNC_MAX = 32
+		SCRIPT_EDITOR_FUNC_MAX = 32,
+		SYNTAX_HIGHLIGHTER_FUNC_MAX = 32
 	};
 
 	static int script_editor_func_count;
 	static CreateScriptEditorFunc script_editor_funcs[SCRIPT_EDITOR_FUNC_MAX];
+
+	static int syntax_highlighters_func_count;
+	static CreateSyntaxHighlighterFunc syntax_highlighters_funcs[SYNTAX_HIGHLIGHTER_FUNC_MAX];
 
 	struct ScriptHistory {
 
@@ -226,8 +242,6 @@ class ScriptEditor : public PanelContainer {
 
 	Vector<ScriptHistory> history;
 	int history_pos;
-
-	Vector<String> previous_scripts;
 
 	EditorHelpIndex *help_index;
 
@@ -250,7 +264,9 @@ class ScriptEditor : public PanelContainer {
 	void _update_recent_scripts();
 	void _open_recent_script(int p_idx);
 
-	void _close_tab(int p_idx, bool p_save = true);
+	void _show_error_dialog(String p_path);
+
+	void _close_tab(int p_idx, bool p_save = true, bool p_history_back = true);
 
 	void _close_current_tab();
 	void _close_discard_current_tab(const String &p_str);
@@ -293,6 +309,8 @@ class ScriptEditor : public PanelContainer {
 	void _show_debugger(bool p_show);
 	void _update_window_menu();
 	void _script_created(Ref<Script> p_script);
+
+	ScriptEditorBase *_get_current_editor() const;
 
 	void _save_layout();
 	void _editor_settings_changed();
@@ -349,6 +367,11 @@ class ScriptEditor : public PanelContainer {
 	Ref<Script> _get_current_script();
 	Array _get_open_scripts() const;
 
+	void _on_find_in_files_requested(String text);
+	void _on_find_in_files_result_selected(String fpath, int line_number, int begin, int end);
+	void _start_find_in_files(bool with_replace);
+	void _on_find_in_files_modified_files(PoolStringArray paths);
+
 	static void _open_script_request(const String &p_path);
 
 	static ScriptEditor *script_editor;
@@ -397,7 +420,9 @@ public:
 	ScriptEditorDebugger *get_debugger() { return debugger; }
 	void set_live_auto_reload_running_scripts(bool p_enabled);
 
+	static void register_create_syntax_highlighter_function(CreateSyntaxHighlighterFunc p_func);
 	static void register_create_script_editor_function(CreateScriptEditorFunc p_func);
+
 	ScriptEditor(EditorNode *p_editor);
 	~ScriptEditor();
 };

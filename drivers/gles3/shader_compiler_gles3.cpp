@@ -477,22 +477,22 @@ String ShaderCompilerGLES3::_dump_node_code(SL::Node *p_node, int p_level, Gener
 
 				current_func_name = fnode->name;
 
-				if (fnode->name == "vertex") {
+				if (fnode->name == vertex_name) {
 
 					_dump_function_deps(pnode, fnode->name, function_code, r_gen_code.vertex_global, added_vtx);
-					r_gen_code.vertex = function_code["vertex"];
+					r_gen_code.vertex = function_code[vertex_name];
 				}
 
-				if (fnode->name == "fragment") {
+				if (fnode->name == fragment_name) {
 
 					_dump_function_deps(pnode, fnode->name, function_code, r_gen_code.fragment_global, added_fragment);
-					r_gen_code.fragment = function_code["fragment"];
+					r_gen_code.fragment = function_code[fragment_name];
 				}
 
-				if (fnode->name == "light") {
+				if (fnode->name == light_name) {
 
 					_dump_function_deps(pnode, fnode->name, function_code, r_gen_code.fragment_global, added_fragment);
-					r_gen_code.light = function_code["light"];
+					r_gen_code.light = function_code[light_name];
 				}
 			}
 
@@ -573,7 +573,7 @@ String ShaderCompilerGLES3::_dump_node_code(SL::Node *p_node, int p_level, Gener
 				if (current_func_name == vertex_name) {
 					r_gen_code.uses_vertex_time = true;
 				}
-				if (current_func_name == fragment_name) {
+				if (current_func_name == fragment_name || current_func_name == light_name) {
 					r_gen_code.uses_fragment_time = true;
 				}
 			}
@@ -795,7 +795,6 @@ ShaderCompilerGLES3::ShaderCompilerGLES3() {
 	actions[VS::SHADER_CANVAS_ITEM].renames["LIGHT_HEIGHT"] = "light_height";
 	actions[VS::SHADER_CANVAS_ITEM].renames["LIGHT_COLOR"] = "light_color";
 	actions[VS::SHADER_CANVAS_ITEM].renames["LIGHT_UV"] = "light_uv";
-	//actions[VS::SHADER_CANVAS_ITEM].renames["LIGHT_SHADOW_COLOR"]="light_shadow_color";
 	actions[VS::SHADER_CANVAS_ITEM].renames["LIGHT"] = "light";
 	actions[VS::SHADER_CANVAS_ITEM].renames["SHADOW_COLOR"] = "shadow_color";
 
@@ -805,9 +804,7 @@ ShaderCompilerGLES3::ShaderCompilerGLES3() {
 	actions[VS::SHADER_CANVAS_ITEM].usage_defines["SCREEN_PIXEL_SIZE"] = "@SCREEN_UV";
 	actions[VS::SHADER_CANVAS_ITEM].usage_defines["NORMAL"] = "#define NORMAL_USED\n";
 	actions[VS::SHADER_CANVAS_ITEM].usage_defines["NORMALMAP"] = "#define NORMALMAP_USED\n";
-	actions[VS::SHADER_CANVAS_ITEM].usage_defines["SHADOW_COLOR"] = "#define SHADOW_COLOR_USED\n";
 	actions[VS::SHADER_CANVAS_ITEM].usage_defines["LIGHT"] = "#define USE_LIGHT_SHADER_CODE\n";
-
 	actions[VS::SHADER_CANVAS_ITEM].render_mode_defines["skip_vertex_transform"] = "#define SKIP_TRANSFORM_USED\n";
 
 	/** SPATIAL SHADER **/
@@ -914,6 +911,7 @@ ShaderCompilerGLES3::ShaderCompilerGLES3() {
 	actions[VS::SHADER_SPATIAL].render_mode_defines["specular_phong"] = "#define SPECULAR_PHONG\n";
 	actions[VS::SHADER_SPATIAL].render_mode_defines["specular_toon"] = "#define SPECULAR_TOON\n";
 	actions[VS::SHADER_SPATIAL].render_mode_defines["specular_disabled"] = "#define SPECULAR_DISABLED\n";
+	actions[VS::SHADER_SPATIAL].render_mode_defines["shadows_disabled"] = "#define SHADOWS_DISABLED\n";
 
 	/* PARTICLES SHADER */
 
@@ -939,6 +937,7 @@ ShaderCompilerGLES3::ShaderCompilerGLES3() {
 
 	vertex_name = "vertex";
 	fragment_name = "fragment";
+	light_name = "light";
 	time_name = "TIME";
 
 	List<String> func_list;

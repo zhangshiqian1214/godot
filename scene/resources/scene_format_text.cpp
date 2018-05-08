@@ -1445,8 +1445,15 @@ void ResourceFormatSaverTextInstance::_find_resources(const Variant &p_variant, 
 
 static String _valprop(const String &p_name) {
 
-	if (p_name.find("\"") != -1 || p_name.find("=") != -1 || p_name.find(" ") != -1)
-		return "\"" + p_name.c_escape_multiline() + "\"";
+	// Escape and quote strings with extended ASCII or further Unicode characters
+	// as well as '"', '=' or ' ' (32)
+	const CharType *cstr = p_name.c_str();
+	for (int i = 0; cstr[i]; i++) {
+		if (cstr[i] == '=' || cstr[i] == '"' || cstr[i] < 33 || cstr[i] > 126) {
+			return "\"" + p_name.c_escape_multiline() + "\"";
+		}
+	}
+	// Keep as is
 	return p_name;
 }
 
@@ -1506,7 +1513,6 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 			title += "load_steps=" + itos(load_steps) + " ";
 		}
 		title += "format=" + itos(FORMAT_VERSION) + "";
-		//title+="engine_version=\""+itos(VERSION_MAJOR)+"."+itos(VERSION_MINOR)+"\"";
 
 		f->store_string(title);
 		f->store_line("]\n"); //one empty line
@@ -1666,7 +1672,7 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 				f->store_string(vars);
 			}
 
-			f->store_line("]\n");
+			f->store_line("]");
 
 			for (int j = 0; j < state->get_node_property_count(i); j++) {
 
@@ -1676,10 +1682,7 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 				f->store_string(_valprop(String(state->get_node_property_name(i, j))) + " = " + vars + "\n");
 			}
 
-			if (state->get_node_property_count(i)) {
-				//add space
-				f->store_line(String());
-			}
+			f->store_line(String());
 		}
 
 		for (int i = 0; i < state->get_connection_count(); i++) {
@@ -1702,14 +1705,12 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 				f->store_string(" binds= " + vars);
 			}
 
-			f->store_line("]\n");
+			f->store_line("]");
 		}
-
-		f->store_line(String());
 
 		Vector<NodePath> editable_instances = state->get_editable_instances();
 		for (int i = 0; i < editable_instances.size(); i++) {
-			f->store_line("[editable path=\"" + editable_instances[i].operator String() + "\"]");
+			f->store_line("\n[editable path=\"" + editable_instances[i].operator String() + "\"]");
 		}
 	}
 

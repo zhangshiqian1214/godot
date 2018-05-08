@@ -448,10 +448,10 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 
 	// TextEdit
 
-	theme->set_stylebox("normal", "TextEdit", make_stylebox(tree_bg_png, 3, 3, 3, 3));
+	theme->set_stylebox("normal", "TextEdit", make_stylebox(tree_bg_png, 3, 3, 3, 3, 0, 0, 0, 0));
 	theme->set_stylebox("focus", "TextEdit", focus);
-	theme->set_stylebox("read_only", "TextEdit", make_stylebox(tree_bg_disabled_png, 4, 4, 4, 4));
-	theme->set_stylebox("completion", "TextEdit", make_stylebox(tree_bg_png, 3, 3, 3, 3));
+	theme->set_stylebox("read_only", "TextEdit", make_stylebox(tree_bg_disabled_png, 4, 4, 4, 4, 0, 0, 0, 0));
+	theme->set_stylebox("completion", "TextEdit", make_stylebox(tree_bg_png, 3, 3, 3, 3, 0, 0, 0, 0));
 
 	theme->set_icon("tab", "TextEdit", make_icon(tab_png));
 
@@ -582,6 +582,8 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 
 	theme->set_icon("checked", "PopupMenu", make_icon(checked_png));
 	theme->set_icon("unchecked", "PopupMenu", make_icon(unchecked_png));
+	theme->set_icon("radio_checked", "PopupMenu", make_icon(radio_checked_png));
+	theme->set_icon("radio_unchecked", "PopupMenu", make_icon(radio_unchecked_png));
 	theme->set_icon("submenu", "PopupMenu", make_icon(submenu_png));
 
 	theme->set_font("font", "PopupMenu", default_font);
@@ -815,6 +817,12 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("default_color", "RichTextLabel", control_font_color);
 	theme->set_color("font_color_selected", "RichTextLabel", font_color_selection);
 	theme->set_color("selection_color", "RichTextLabel", Color(0.1, 0.1, 1, 0.8));
+
+	theme->set_color("font_color_shadow", "RichTextLabel", Color(0, 0, 0, 0));
+
+	theme->set_constant("shadow_offset_x", "RichTextLabel", 1 * scale);
+	theme->set_constant("shadow_offset_y", "RichTextLabel", 1 * scale);
+	theme->set_constant("shadow_as_outline", "RichTextLabel", 0 * scale);
 
 	theme->set_constant("line_separation", "RichTextLabel", 1 * scale);
 	theme->set_constant("table_hseparation", "RichTextLabel", 3 * scale);

@@ -137,6 +137,8 @@ public:
 	String insert(int p_at_pos, const String &p_string) const;
 	String pad_decimals(int p_digits) const;
 	String pad_zeros(int p_digits) const;
+	String trim_prefix(const String &p_prefix) const;
+	String trim_suffix(const String &p_suffix) const;
 	String lpad(int min_length, const String &character = " ") const;
 	String rpad(int min_length, const String &character = " ") const;
 	String sprintf(const Array &values, bool *error) const;
@@ -146,6 +148,7 @@ public:
 	static String num_scientific(double p_num);
 	static String num_real(double p_num);
 	static String num_int64(int64_t p_num, int base = 10, bool capitalize_hex = false);
+	static String num_uint64(uint64_t p_num, int base = 10, bool capitalize_hex = false);
 	static String chr(CharType p_char);
 	static String md5(const uint8_t *p_md5);
 	static String hex_encode_buffer(const uint8_t *p_buffer, int p_len);
@@ -187,6 +190,8 @@ public:
 	String dedent() const;
 	String strip_edges(bool left = true, bool right = true) const;
 	String strip_escapes() const;
+	String lstrip(const Vector<CharType> &p_chars) const;
+	String rstrip(const Vector<CharType> &p_chars) const;
 	String get_extension() const;
 	String get_basename() const;
 	String plus_file(const String &p_file) const;

@@ -106,6 +106,7 @@ static OS::VideoMode video_mode;
 static bool init_maximized = false;
 static bool init_windowed = false;
 static bool init_fullscreen = false;
+static bool init_always_on_top = false;
 static bool init_use_custom_pos = false;
 #ifdef DEBUG_ENABLED
 static bool debug_collisions = false;
@@ -124,8 +125,17 @@ static bool editor = false;
 static bool show_help = false;
 static bool disable_render_loop = false;
 static int fixed_fps = -1;
+static bool auto_build_solutions = false;
+static bool auto_quit = false;
+static bool print_fps = false;
 
 static OS::ProcessID allow_focus_steal_pid = 0;
+
+static bool project_manager = false;
+
+bool Main::is_project_manager() {
+	return project_manager;
+}
 
 void initialize_physics() {
 
@@ -166,7 +176,7 @@ static String get_full_version_string() {
 	String hash = String(VERSION_HASH);
 	if (hash.length() != 0)
 		hash = "." + hash.left(7);
-	return String(VERSION_MKSTRING) + hash;
+	return String(VERSION_FULL_BUILD) + hash;
 }
 
 //#define DEBUG_INIT
@@ -197,6 +207,7 @@ void Main::print_help(const char *p_binary) {
 	OS::get_singleton()->print("  -e, --editor                     Start the editor instead of running the scene.\n");
 	OS::get_singleton()->print("  -p, --project-manager            Start the project manager, even if a project is auto-detected.\n");
 #endif
+	OS::get_singleton()->print("  -q, --quit                       Quit after the first iteration.\n");
 	OS::get_singleton()->print("  -l, --language <locale>          Use a specific locale (<locale> being a two-letter code).\n");
 	OS::get_singleton()->print("  --path <directory>               Path to a project (<directory> must contain a 'project.godot' file).\n");
 	OS::get_singleton()->print("  -u, --upwards                    Scan folders upwards for project.godot file.\n");
@@ -224,6 +235,7 @@ void Main::print_help(const char *p_binary) {
 	OS::get_singleton()->print("  -f, --fullscreen                 Request fullscreen mode.\n");
 	OS::get_singleton()->print("  -m, --maximized                  Request a maximized window.\n");
 	OS::get_singleton()->print("  -w, --windowed                   Request windowed mode.\n");
+	OS::get_singleton()->print("  -t, --always-on-top              Request an always-on-top window.\n");
 	OS::get_singleton()->print("  --resolution <W>x<H>             Request window resolution.\n");
 	OS::get_singleton()->print("  --position <X>,<Y>               Request window position.\n");
 	OS::get_singleton()->print("  --low-dpi                        Force low-DPI mode (macOS and Windows only).\n");
@@ -244,6 +256,7 @@ void Main::print_help(const char *p_binary) {
 	OS::get_singleton()->print("  --disable-render-loop            Disable render loop so rendering only occurs when called explicitly from script.\n");
 	OS::get_singleton()->print("  --disable-crash-handler          Disable crash handler when supported by the platform code.\n");
 	OS::get_singleton()->print("  --fixed-fps <fps>                Force a fixed number of frames per second. This setting disables real-time synchronization.\n");
+	OS::get_singleton()->print("  --print-fps                      Print the frames per second to the stdout.\n");
 	OS::get_singleton()->print("\n");
 
 	OS::get_singleton()->print("Standalone tools:\n");
@@ -253,6 +266,7 @@ void Main::print_help(const char *p_binary) {
 	OS::get_singleton()->print("  --export-debug                   Use together with --export, enables debug mode for the template.\n");
 	OS::get_singleton()->print("  --doctool <path>                 Dump the engine API reference to the given <path> in XML format, merging if existing files are found.\n");
 	OS::get_singleton()->print("  --no-docbase                     Disallow dumping the base types (used with --doctool).\n");
+	OS::get_singleton()->print("  --build-solutions                Build the scripting solutions (e.g. for C# projects).\n");
 #ifdef DEBUG_METHODS_ENABLED
 	OS::get_singleton()->print("  --gdnative-generate-json-api     Generate JSON dump of the Godot API for GDNative bindings.\n");
 #endif
@@ -337,6 +351,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	Vector<String> breakpoints;
 	bool use_custom_res = true;
 	bool force_res = false;
+	bool found_project = false;
 
 	packed_data = PackedData::get_singleton();
 	if (!packed_data)
@@ -430,6 +445,9 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		} else if (I->get() == "-w" || I->get() == "--windowed") { // force windowed window
 
 			init_windowed = true;
+		} else if (I->get() == "-t" || I->get() == "--always-on-top") { // force always-on-top window
+
+			init_always_on_top = true;
 		} else if (I->get() == "--profiling") { // enable profiling
 
 			use_debug_profiler = true;
@@ -508,9 +526,17 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 			//video_mode.fullscreen=false;
 			init_fullscreen = true;
+#ifdef TOOLS_ENABLED
 		} else if (I->get() == "-e" || I->get() == "--editor") { // starts editor
 
 			editor = true;
+		} else if (I->get() == "-p" || I->get() == "--project-manager") { // starts project manager
+
+			project_manager = true;
+		} else if (I->get() == "--build-solutions") { // Build the scripting solution such C#
+
+			auto_build_solutions = true;
+#endif
 		} else if (I->get() == "--no-window") { // disable window creation, Windows only
 
 			OS::get_singleton()->set_no_window_mode(true);
@@ -536,6 +562,8 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			}
 		} else if (I->get() == "-u" || I->get() == "--upwards") { // scan folders upwards
 			upwards = true;
+		} else if (I->get() == "-q" || I->get() == "--quit") { // Auto quit at the end of the first main loop iteration
+			auto_quit = true;
 		} else if (I->get().ends_with("project.godot")) {
 			String path;
 			String file = I->get();
@@ -639,6 +667,8 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 				OS::get_singleton()->print("Missing fixed-fps argument, aborting.\n");
 				goto error;
 			}
+		} else if (I->get() == "--print-fps") {
+			print_fps = true;
 		} else if (I->get() == "--disable-crash-handler") {
 			OS::get_singleton()->disable_crash_handler();
 		} else {
@@ -661,6 +691,19 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		}
 
 		I = N;
+	}
+
+	if (globals->setup(game_path, main_pack, upwards) == OK) {
+		found_project = true;
+	} else {
+
+#ifdef TOOLS_ENABLED
+		editor = false;
+#else
+		OS::get_singleton()->print("Error: Could not load game path '%s'.\n", game_path.ascii().get_data());
+
+		goto error;
+#endif
 	}
 
 	GLOBAL_DEF("memory/limits/multithreaded_server/rid_pool_prealloc", 60);
@@ -687,6 +730,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	} else if (debug_mode == "local") {
 
 		script_debugger = memnew(ScriptDebuggerLocal);
+		OS::get_singleton()->initialize_debugging();
 	}
 
 	FileAccessNetwork::configure();
@@ -735,17 +779,6 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 #endif
 
-	if (globals->setup(game_path, main_pack, upwards) != OK) {
-
-#ifdef TOOLS_ENABLED
-		editor = false;
-#else
-		OS::get_singleton()->print("Error: Could not load game path '%s'.\n", game_path.ascii().get_data());
-
-		goto error;
-#endif
-	}
-
 	GLOBAL_DEF("logging/file_logging/enable_file_logging", false);
 	GLOBAL_DEF("logging/file_logging/log_path", "user://logs/log.txt");
 	GLOBAL_DEF("logging/file_logging/max_log_files", 10);
@@ -755,6 +788,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		OS::get_singleton()->add_logger(memnew(RotatedFileLogger(base_path, max_files)));
 	}
 
+#ifdef TOOLS_ENABLED
 	if (editor) {
 		Engine::get_singleton()->set_editor_hint(true);
 		main_args.push_back("--editor");
@@ -762,7 +796,30 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			init_maximized = true;
 			video_mode.maximized = true;
 		}
+	}
+
+	if (!project_manager) {
+		// Determine if the project manager should be requested
+		project_manager = main_args.size() == 0 && !found_project;
+	}
+#endif
+
+	if (main_args.size() == 0 && String(GLOBAL_DEF("application/run/main_scene", "")) == "") {
+#ifdef TOOLS_ENABLED
+		if (!editor && !project_manager) {
+#endif
+			OS::get_singleton()->print("Error: Can't run project: no main scene defined.\n");
+			goto error;
+#ifdef TOOLS_ENABLED
+		}
+#endif
+	}
+
+	if (editor || project_manager) {
 		use_custom_res = false;
+		input_map->load_default(); //keys for editor
+	} else {
+		input_map->load_from_globals(); //keys for game
 	}
 
 	if (bool(ProjectSettings::get_singleton()->get("application/run/disable_stdout"))) {
@@ -777,26 +834,18 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	OS::get_singleton()->set_cmdline(execpath, main_args);
 
-#ifdef TOOLS_ENABLED
-
-	if (main_args.size() == 0 && (!ProjectSettings::get_singleton()->has_setting("application/run/main_loop_type")) && (!ProjectSettings::get_singleton()->has_setting("application/run/main_scene") || String(ProjectSettings::get_singleton()->get("application/run/main_scene")) == ""))
-		use_custom_res = false; //project manager (run without arguments)
-
-#endif
-
-	if (editor)
-		input_map->load_default(); //keys for editor
-	else
-		input_map->load_from_globals(); //keys for game
-
-	//if (video_driver == "") // useless for now, so removing
-	//	video_driver = GLOBAL_DEF("display/driver/name", Variant((const char *)OS::get_singleton()->get_video_driver_name(0)));
+	GLOBAL_DEF("rendering/quality/driver/driver_name", "GLES3");
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/quality/driver/driver_name", PropertyInfo(Variant::STRING, "rendering/quality/driver/driver_name", PROPERTY_HINT_ENUM, "GLES3,GLES2"));
+	if (video_driver == "") {
+		video_driver = GLOBAL_GET("rendering/quality/driver/driver_name");
+	}
 
 	GLOBAL_DEF("display/window/size/width", 1024);
 	GLOBAL_DEF("display/window/size/height", 600);
 	GLOBAL_DEF("display/window/size/resizable", true);
 	GLOBAL_DEF("display/window/size/borderless", false);
 	GLOBAL_DEF("display/window/size/fullscreen", false);
+	GLOBAL_DEF("display/window/size/always_on_top", false);
 	GLOBAL_DEF("display/window/size/test_width", 0);
 	GLOBAL_DEF("display/window/size/test_height", 0);
 
@@ -819,6 +868,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		video_mode.resizable = GLOBAL_GET("display/window/size/resizable");
 		video_mode.borderless_window = GLOBAL_GET("display/window/size/borderless");
 		video_mode.fullscreen = GLOBAL_GET("display/window/size/fullscreen");
+		video_mode.always_on_top = GLOBAL_GET("display/window/size/always_on_top");
 	}
 
 	if (!force_lowdpi) {
@@ -830,9 +880,11 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	GLOBAL_DEF("rendering/quality/intended_usage/framebuffer_allocation", 2);
 	GLOBAL_DEF("rendering/quality/intended_usage/framebuffer_allocation.mobile", 3);
 
-	if (editor) {
-		OS::get_singleton()->_allow_hidpi = true; //editors always in hidpi
+	if (editor || project_manager) {
+		// The editor and project manager always detect and use hiDPI if needed
+		OS::get_singleton()->_allow_hidpi = true;
 	}
+
 	Engine::get_singleton()->_pixel_snap = GLOBAL_DEF("rendering/quality/2d/use_pixel_snap", false);
 	OS::get_singleton()->_keep_screen_on = GLOBAL_DEF("display/window/energy_saving/keep_screen_on", true);
 	if (rtm == -1) {
@@ -904,9 +956,10 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	}
 
 	Engine::get_singleton()->set_iterations_per_second(GLOBAL_DEF("physics/common/physics_fps", 60));
+	Engine::get_singleton()->set_physics_jitter_fix(GLOBAL_DEF("physics/common/physics_jitter_fix", 0.5));
 	Engine::get_singleton()->set_target_fps(GLOBAL_DEF("debug/settings/fps/force_fps", 0));
 
-	GLOBAL_DEF("debug/settings/stdout/print_fps", OS::get_singleton()->is_stdout_verbose());
+	GLOBAL_DEF("debug/settings/stdout/print_fps", false);
 
 	if (!OS::get_singleton()->_verbose_stdout) //overridden
 		OS::get_singleton()->_verbose_stdout = GLOBAL_DEF("debug/settings/stdout/verbose_stdout", false);
@@ -1022,6 +1075,9 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	} else if (init_fullscreen) {
 		OS::get_singleton()->set_window_fullscreen(true);
 	}
+	if (init_always_on_top) {
+		OS::get_singleton()->set_window_always_on_top(true);
+	}
 
 	register_server_types();
 
@@ -1062,7 +1118,7 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 			MAIN_PRINT("Main: Create bootsplash");
 #if defined(TOOLS_ENABLED) && !defined(NO_EDITOR_SPLASH)
 
-			Ref<Image> splash = editor ? memnew(Image(boot_splash_editor_png)) : memnew(Image(boot_splash_png));
+			Ref<Image> splash = (editor || project_manager) ? memnew(Image(boot_splash_editor_png)) : memnew(Image(boot_splash_png));
 #else
 			Ref<Image> splash = memnew(Image(boot_splash_png));
 #endif
@@ -1087,13 +1143,16 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	GLOBAL_DEF("application/config/icon", String());
 	ProjectSettings::get_singleton()->set_custom_property_info("application/config/icon", PropertyInfo(Variant::STRING, "application/config/icon", PROPERTY_HINT_FILE, "*.png,*.webp"));
 
-	if (bool(GLOBAL_DEF("display/window/handheld/emulate_touchscreen", false))) {
-		if (!OS::get_singleton()->has_touchscreen_ui_hint() && Input::get_singleton() && !editor) {
-			//only if no touchscreen ui hint, set emulation
-			InputDefault *id = Object::cast_to<InputDefault>(Input::get_singleton());
-			if (id)
-				id->set_emulate_touch(true);
+	InputDefault *id = Object::cast_to<InputDefault>(Input::get_singleton());
+	if (id) {
+		if (bool(GLOBAL_DEF("input/pointing_devices/emulate_touch_from_mouse", false)) && !(editor || project_manager)) {
+			if (!OS::get_singleton()->has_touchscreen_ui_hint()) {
+				//only if no touchscreen ui hint, set emulation
+				id->set_emulate_touch_from_mouse(true);
+			}
 		}
+
+		id->set_emulate_mouse_from_touch(bool(GLOBAL_DEF("input/pointing_devices/emulate_mouse_from_touch", true)));
 	}
 
 	MAIN_PRINT("Main: Load Remaps");
@@ -1171,12 +1230,234 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	return OK;
 }
 
+// everything the main loop needs to know about frame timings
+struct _FrameTime {
+	float animation_step; // time to advance animations for (argument to process())
+	int physics_steps; // number of times to iterate the physics engine
+
+	void clamp_animation(float min_animation_step, float max_animation_step) {
+		if (animation_step < min_animation_step) {
+			animation_step = min_animation_step;
+		} else if (animation_step > max_animation_step) {
+			animation_step = max_animation_step;
+		}
+	}
+};
+
+class _TimerSync {
+	// wall clock time measured on the main thread
+	uint64_t last_cpu_ticks_usec;
+	uint64_t current_cpu_ticks_usec;
+
+	// logical game time since last physics timestep
+	float time_accum;
+
+	// current difference between wall clock time and reported sum of animation_steps
+	float time_deficit;
+
+	// number of frames back for keeping accumulated physics steps roughly constant.
+	// value of 12 chosen because that is what is required to make 144 Hz monitors
+	// behave well with 60 Hz physics updates. The only worse commonly available refresh
+	// would be 85, requiring CONTROL_STEPS = 17.
+	static const int CONTROL_STEPS = 12;
+
+	// sum of physics steps done over the last (i+1) frames
+	int accumulated_physics_steps[CONTROL_STEPS];
+
+	// typical value for accumulated_physics_steps[i] is either this or this plus one
+	int typical_physics_steps[CONTROL_STEPS];
+
+protected:
+	// returns the fraction of p_frame_slice required for the timer to overshoot
+	// before advance_core considers changing the physics_steps return from
+	// the typical values as defined by typical_physics_steps
+	float get_physics_jitter_fix() {
+		return Engine::get_singleton()->get_physics_jitter_fix();
+	}
+
+	// gets our best bet for the average number of physics steps per render frame
+	// return value: number of frames back this data is consistent
+	int get_average_physics_steps(float &p_min, float &p_max) {
+		p_min = typical_physics_steps[0];
+		p_max = p_min + 1;
+
+		for (int i = 1; i < CONTROL_STEPS; ++i) {
+			const float typical_lower = typical_physics_steps[i];
+			const float current_min = typical_lower / (i + 1);
+			if (current_min > p_max)
+				return i; // bail out of further restrictions would void the interval
+			else if (current_min > p_min)
+				p_min = current_min;
+			const float current_max = (typical_lower + 1) / (i + 1);
+			if (current_max < p_min)
+				return i;
+			else if (current_max < p_max)
+				p_max = current_max;
+		}
+
+		return CONTROL_STEPS;
+	}
+
+	// advance physics clock by p_animation_step, return appropriate number of steps to simulate
+	_FrameTime advance_core(float p_frame_slice, int p_iterations_per_second, float p_animation_step) {
+		_FrameTime ret;
+
+		ret.animation_step = p_animation_step;
+
+		// simple determination of number of physics iteration
+		time_accum += ret.animation_step;
+		ret.physics_steps = floor(time_accum * p_iterations_per_second);
+
+		int min_typical_steps = typical_physics_steps[0];
+		int max_typical_steps = min_typical_steps + 1;
+
+		// given the past recorded steps and typcial steps to match, calculate bounds for this
+		// step to be typical
+		bool update_typical = false;
+
+		for (int i = 0; i < CONTROL_STEPS - 1; ++i) {
+			int steps_left_to_match_typical = typical_physics_steps[i + 1] - accumulated_physics_steps[i];
+			if (steps_left_to_match_typical > max_typical_steps ||
+					steps_left_to_match_typical + 1 < min_typical_steps) {
+				update_typical = true;
+				break;
+			}
+
+			if (steps_left_to_match_typical > min_typical_steps)
+				min_typical_steps = steps_left_to_match_typical;
+			if (steps_left_to_match_typical + 1 < max_typical_steps)
+				max_typical_steps = steps_left_to_match_typical + 1;
+		}
+
+		// try to keep it consistent with previous iterations
+		if (ret.physics_steps < min_typical_steps) {
+			const int max_possible_steps = floor((time_accum)*p_iterations_per_second + get_physics_jitter_fix());
+			if (max_possible_steps < min_typical_steps) {
+				ret.physics_steps = max_possible_steps;
+				update_typical = true;
+			} else {
+				ret.physics_steps = min_typical_steps;
+			}
+		} else if (ret.physics_steps > max_typical_steps) {
+			const int min_possible_steps = floor((time_accum)*p_iterations_per_second - get_physics_jitter_fix());
+			if (min_possible_steps > max_typical_steps) {
+				ret.physics_steps = min_possible_steps;
+				update_typical = true;
+			} else {
+				ret.physics_steps = max_typical_steps;
+			}
+		}
+
+		time_accum -= ret.physics_steps * p_frame_slice;
+
+		// keep track of accumulated step counts
+		for (int i = CONTROL_STEPS - 2; i >= 0; --i) {
+			accumulated_physics_steps[i + 1] = accumulated_physics_steps[i] + ret.physics_steps;
+		}
+		accumulated_physics_steps[0] = ret.physics_steps;
+
+		if (update_typical) {
+			for (int i = CONTROL_STEPS - 1; i >= 0; --i) {
+				if (typical_physics_steps[i] > accumulated_physics_steps[i]) {
+					typical_physics_steps[i] = accumulated_physics_steps[i];
+				} else if (typical_physics_steps[i] < accumulated_physics_steps[i] - 1) {
+					typical_physics_steps[i] = accumulated_physics_steps[i] - 1;
+				}
+			}
+		}
+
+		return ret;
+	}
+
+	// calls advance_core, keeps track of deficit it adds to animaption_step, make sure the deficit sum stays close to zero
+	_FrameTime advance_checked(float p_frame_slice, int p_iterations_per_second, float p_animation_step) {
+		if (fixed_fps != -1)
+			p_animation_step = 1.0 / fixed_fps;
+
+		// compensate for last deficit
+		p_animation_step += time_deficit;
+
+		_FrameTime ret = advance_core(p_frame_slice, p_iterations_per_second, p_animation_step);
+
+		// we will do some clamping on ret.animation_step and need to sync those changes to time_accum,
+		// that's easiest if we just remember their fixed difference now
+		const double animation_minus_accum = ret.animation_step - time_accum;
+
+		// first, least important clamping: keep ret.animation_step consistent with typical_physics_steps.
+		// this smoothes out the animation steps and culls small but quick variations.
+		{
+			float min_average_physics_steps, max_average_physics_steps;
+			int consistent_steps = get_average_physics_steps(min_average_physics_steps, max_average_physics_steps);
+			if (consistent_steps > 3) {
+				ret.clamp_animation(min_average_physics_steps * p_frame_slice, max_average_physics_steps * p_frame_slice);
+			}
+		}
+
+		// second clamping: keep abs(time_deficit) < jitter_fix * frame_slise
+		float max_clock_deviation = get_physics_jitter_fix() * p_frame_slice;
+		ret.clamp_animation(p_animation_step - max_clock_deviation, p_animation_step + max_clock_deviation);
+
+		// last clamping: make sure time_accum is between 0 and p_frame_slice for consistency between physics and animation
+		ret.clamp_animation(animation_minus_accum, animation_minus_accum + p_frame_slice);
+
+		// restore time_accum
+		time_accum = ret.animation_step - animation_minus_accum;
+
+		// track deficit
+		time_deficit = p_animation_step - ret.animation_step;
+
+		return ret;
+	}
+
+	// determine wall clock step since last iteration
+	float get_cpu_animation_step() {
+		uint64_t cpu_ticks_elapsed = current_cpu_ticks_usec - last_cpu_ticks_usec;
+		last_cpu_ticks_usec = current_cpu_ticks_usec;
+
+		return cpu_ticks_elapsed / 1000000.0;
+	}
+
+public:
+	explicit _TimerSync() :
+			last_cpu_ticks_usec(0),
+			current_cpu_ticks_usec(0),
+			time_accum(0),
+			time_deficit(0) {
+		for (int i = CONTROL_STEPS - 1; i >= 0; --i) {
+			typical_physics_steps[i] = i;
+			accumulated_physics_steps[i] = i;
+		}
+	}
+
+	// start the clock
+	void init(uint64_t p_cpu_ticks_usec) {
+		current_cpu_ticks_usec = last_cpu_ticks_usec = p_cpu_ticks_usec;
+	}
+
+	// set measured wall clock time
+	void set_cpu_ticks_usec(uint64_t p_cpu_ticks_usec) {
+		current_cpu_ticks_usec = p_cpu_ticks_usec;
+	}
+
+	// advance one frame, return timesteps to take
+	_FrameTime advance(float p_frame_slice, int p_iterations_per_second) {
+		float cpu_animation_step = get_cpu_animation_step();
+
+		return advance_checked(p_frame_slice, p_iterations_per_second, cpu_animation_step);
+	}
+
+	void before_start_render() {
+		VisualServer::get_singleton()->sync();
+	}
+};
+
+static _TimerSync _timer_sync;
+
 bool Main::start() {
 
 	ERR_FAIL_COND_V(!_start_success, false);
 
 	bool hasicon = false;
-	bool editor = false;
 	String doc_tool;
 	List<String> removal_docs;
 	bool doc_base = true;
@@ -1185,31 +1466,35 @@ bool Main::start() {
 	String test;
 	String _export_preset;
 	bool export_debug = false;
-	bool project_manager_request = false;
+
+	_timer_sync.init(OS::get_singleton()->get_ticks_usec());
 
 	List<String> args = OS::get_singleton()->get_cmdline_args();
 	for (int i = 0; i < args.size(); i++) {
 		//parameters that do not have an argument to the right
 		if (args[i] == "--no-docbase") {
 			doc_base = false;
+#ifdef TOOLS_ENABLED
 		} else if (args[i] == "-e" || args[i] == "--editor") {
 			editor = true;
 		} else if (args[i] == "-p" || args[i] == "--project-manager") {
-			project_manager_request = true;
+			project_manager = true;
+#endif
 		} else if (args[i].length() && args[i][0] != '-' && game_path == "") {
 			game_path = args[i];
 		}
 		//parameters that have an argument to the right
 		else if (i < (args.size() - 1)) {
 			bool parsed_pair = true;
-			if (args[i] == "--doctool") {
-				doc_tool = args[i + 1];
-				for (int j = i + 2; j < args.size(); j++)
-					removal_docs.push_back(args[j]);
-			} else if (args[i] == "-s" || args[i] == "--script") {
+			if (args[i] == "-s" || args[i] == "--script") {
 				script = args[i + 1];
 			} else if (args[i] == "--test") {
 				test = args[i + 1];
+#ifdef TOOLS_ENABLED
+			} else if (args[i] == "--doctool") {
+				doc_tool = args[i + 1];
+				for (int j = i + 2; j < args.size(); j++)
+					removal_docs.push_back(args[j]);
 			} else if (args[i] == "--export") {
 				editor = true; //needs editor
 				if (i + 1 < args.size()) {
@@ -1227,6 +1512,7 @@ bool Main::start() {
 					return false;
 				}
 				export_debug = true;
+#endif
 			} else {
 				// The parameter does not match anything known, don't skip the next argument
 				parsed_pair = false;
@@ -1256,7 +1542,7 @@ bool Main::start() {
 		DocData docsrc;
 		Map<String, String> doc_data_classes;
 		Set<String> checked_paths;
-		print_line("Loading docs..");
+		print_line("Loading docs...");
 
 		for (int i = 0; i < _doc_data_class_path_count; i++) {
 			String path = doc_tool.plus_file(_doc_data_class_paths[i].path);
@@ -1274,14 +1560,14 @@ bool Main::start() {
 		checked_paths.insert(index_path);
 		print_line("Loading docs from: " + index_path);
 
-		print_line("Merging docs..");
+		print_line("Merging docs...");
 		doc.merge_from(docsrc);
 		for (Set<String>::Element *E = checked_paths.front(); E; E = E->next()) {
 			print_line("Erasing old docs at: " + E->get());
 			DocData::erase_classes(E->get());
 		}
 
-		print_line("Generating new docs..");
+		print_line("Generating new docs...");
 		doc.save_classes(index_path, doc_data_classes);
 
 		return false;
@@ -1407,7 +1693,7 @@ bool Main::start() {
 		{
 		}
 
-		if (!editor) {
+		if (!editor && !project_manager) {
 			//standard helpers that can be changed from main config
 
 			String stretch_mode = GLOBAL_DEF("display/window/stretch/mode", "disabled");
@@ -1456,7 +1742,7 @@ bool Main::start() {
 			bool snap_controls = GLOBAL_DEF("gui/common/snap_controls_to_pixels", true);
 			sml->get_root()->set_snap_controls_to_pixels(snap_controls);
 
-			bool font_oversampling = GLOBAL_DEF("rendering/quality/dynamic_fonts/use_oversampling", false);
+			bool font_oversampling = GLOBAL_DEF("rendering/quality/dynamic_fonts/use_oversampling", true);
 			sml->set_use_font_oversampling(font_oversampling);
 
 		} else {
@@ -1469,11 +1755,11 @@ bool Main::start() {
 			sml->set_auto_accept_quit(GLOBAL_DEF("application/config/auto_accept_quit", true));
 			sml->set_quit_on_go_back(GLOBAL_DEF("application/config/quit_on_go_back", true));
 			GLOBAL_DEF("gui/common/snap_controls_to_pixels", true);
-			GLOBAL_DEF("rendering/quality/dynamic_fonts/use_oversampling", false);
+			GLOBAL_DEF("rendering/quality/dynamic_fonts/use_oversampling", true);
 		}
 
 		String local_game_path;
-		if (game_path != "" && !project_manager_request) {
+		if (game_path != "" && !project_manager) {
 
 			local_game_path = game_path.replace("\\", "/");
 
@@ -1518,7 +1804,7 @@ bool Main::start() {
 #endif
 		}
 
-		if (!project_manager_request && !editor) {
+		if (!project_manager && !editor) { // game
 			if (game_path != "" || script != "") {
 				//autoload
 				List<PropertyInfo> props;
@@ -1600,7 +1886,6 @@ bool Main::start() {
 
 					sml->get_root()->add_child(E->get());
 				}
-				//singletons
 			}
 
 			if (game_path != "") {
@@ -1626,7 +1911,7 @@ bool Main::start() {
 		}
 
 #ifdef TOOLS_ENABLED
-		if (project_manager_request || (script == "" && test == "" && game_path == "" && !editor)) {
+		if (project_manager || (script == "" && test == "" && game_path == "" && !editor)) {
 
 			ProjectManager *pmanager = memnew(ProjectManager);
 			ProgressDialog *progress_dialog = memnew(ProgressDialog);
@@ -1649,7 +1934,6 @@ bool Main::start() {
 
 uint64_t Main::last_ticks = 0;
 uint64_t Main::target_ticks = 0;
-float Main::time_accum = 0;
 uint32_t Main::frames = 0;
 uint32_t Main::frame = 0;
 bool Main::force_redraw_requested = false;
@@ -1662,14 +1946,15 @@ bool Main::iteration() {
 
 	uint64_t ticks = OS::get_singleton()->get_ticks_usec();
 	Engine::get_singleton()->_frame_ticks = ticks;
+	_timer_sync.set_cpu_ticks_usec(ticks);
 
 	uint64_t ticks_elapsed = ticks - last_ticks;
 
-	double step = (double)ticks_elapsed / 1000000.0;
-	if (fixed_fps != -1)
-		step = 1.0 / fixed_fps;
+	int physics_fps = Engine::get_singleton()->get_iterations_per_second();
+	float frame_slice = 1.0 / physics_fps;
 
-	float frame_slice = 1.0 / Engine::get_singleton()->get_iterations_per_second();
+	_FrameTime advance = _timer_sync.advance(frame_slice, physics_fps);
+	double step = advance.animation_step;
 
 	Engine::get_singleton()->_frame_step = step;
 
@@ -1685,20 +1970,19 @@ bool Main::iteration() {
 
 	last_ticks = ticks;
 
-	if (fixed_fps == -1 && step > frame_slice * 8)
-		step = frame_slice * 8;
-
-	time_accum += step;
+	static const int max_physics_steps = 8;
+	if (fixed_fps == -1 && advance.physics_steps > max_physics_steps) {
+		step -= (advance.physics_steps - max_physics_steps) * frame_slice;
+		advance.physics_steps = max_physics_steps;
+	}
 
 	float time_scale = Engine::get_singleton()->get_time_scale();
 
 	bool exit = false;
 
-	int iters = 0;
-
 	Engine::get_singleton()->_in_physics = true;
 
-	while (time_accum > frame_slice) {
+	for (int iters = 0; iters < advance.physics_steps; ++iters) {
 
 		uint64_t physics_begin = OS::get_singleton()->get_ticks_usec();
 
@@ -1720,12 +2004,10 @@ bool Main::iteration() {
 		Physics2DServer::get_singleton()->end_sync();
 		Physics2DServer::get_singleton()->step(frame_slice * time_scale);
 
-		time_accum -= frame_slice;
 		message_queue->flush();
 
 		physics_process_ticks = MAX(physics_process_ticks, OS::get_singleton()->get_ticks_usec() - physics_begin); // keep the largest one for reference
 		physics_process_max = MAX(OS::get_singleton()->get_ticks_usec() - physics_begin, physics_process_max);
-		iters++;
 		Engine::get_singleton()->_physics_frames++;
 	}
 
@@ -1736,7 +2018,7 @@ bool Main::iteration() {
 	OS::get_singleton()->get_main_loop()->idle(step * time_scale);
 	message_queue->flush();
 
-	VisualServer::get_singleton()->sync(); //sync if still drawing from previous frames.
+	_timer_sync.before_start_render(); //sync if still drawing from previous frames.
 
 	if (OS::get_singleton()->can_draw() && !disable_render_loop) {
 
@@ -1775,9 +2057,13 @@ bool Main::iteration() {
 
 	if (frame > 1000000) {
 
-		if (GLOBAL_DEF("debug/settings/stdout/print_fps", OS::get_singleton()->is_stdout_verbose()) && !editor) {
-			print_line("FPS: " + itos(frames));
-		};
+		if (editor || project_manager) {
+			if (print_fps) {
+				print_line("Editor FPS: " + itos(frames));
+			}
+		} else if (GLOBAL_GET("debug/settings/stdout/print_fps") || print_fps) {
+			print_line("Game FPS: " + itos(frames));
+		}
 
 		Engine::get_singleton()->_fps = frames;
 		performance->set_process_time(USEC_TO_SEC(idle_process_max));
@@ -1810,7 +2096,16 @@ bool Main::iteration() {
 		target_ticks = MIN(MAX(target_ticks, current_ticks - time_step), current_ticks + time_step);
 	}
 
-	return exit;
+#ifdef TOOLS_ENABLED
+	if (auto_build_solutions) {
+		auto_build_solutions = false;
+		if (!EditorNode::get_singleton()->call_build()) {
+			ERR_FAIL_V(true);
+		}
+	}
+#endif
+
+	return exit || auto_quit;
 }
 
 void Main::force_redraw() {

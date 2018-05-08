@@ -212,35 +212,39 @@ void FindReplaceBar::_replace_all() {
 
 	text_edit->begin_complex_operation();
 
-	while (search_next()) {
+	if (search_current()) {
+		do {
+			// replace area
+			Point2i match_from(result_line, result_col);
+			Point2i match_to(result_line, result_col + search_text_len);
 
-		// replace area
-		Point2i match_from(result_line, result_col);
-		Point2i match_to(result_line, result_col + search_text_len);
+			if (match_from < prev_match) {
+				break; // done
+			}
 
-		if (match_from < prev_match)
-			break; // done
+			prev_match = Point2i(result_line, result_col + replace_text.length());
 
-		prev_match = Point2i(result_line, result_col + replace_text.length());
+			text_edit->unfold_line(result_line);
+			text_edit->select(result_line, result_col, result_line, match_to.y);
 
-		text_edit->unfold_line(result_line);
-		text_edit->select(result_line, result_col, result_line, match_to.y);
+			if (selection_enabled && is_selection_only()) {
+				if (match_from < selection_begin || match_to > selection_end) {
+					continue;
+				}
 
-		if (selection_enabled && is_selection_only()) {
+				// replace but adjust selection bounds
+				text_edit->insert_text_at_cursor(replace_text);
+				if (match_to.x == selection_end.x) {
+					selection_end.y += replace_text.length() - search_text_len;
+				}
 
-			if (match_from < selection_begin || match_to > selection_end)
-				continue;
+			} else {
+				// just replace
+				text_edit->insert_text_at_cursor(replace_text);
+			}
 
-			// replace but adjust selection bounds
-			text_edit->insert_text_at_cursor(replace_text);
-			if (match_to.x == selection_end.x)
-				selection_end.y += replace_text.length() - search_text_len;
-		} else {
-			// just replace
-			text_edit->insert_text_at_cursor(replace_text);
-		}
-
-		rc++;
+			rc++;
+		} while (search_next());
 	}
 
 	text_edit->end_complex_operation();
@@ -646,12 +650,12 @@ void CodeTextEditor::_text_editor_gui_input(const Ref<InputEvent> &p_event) {
 }
 
 void CodeTextEditor::_zoom_in() {
-	font_resize_val += EDSCALE;
+	font_resize_val += MAX(EDSCALE, 1.0f);
 	_zoom_changed();
 }
 
 void CodeTextEditor::_zoom_out() {
-	font_resize_val -= EDSCALE;
+	font_resize_val -= MAX(EDSCALE, 1.0f);
 	_zoom_changed();
 }
 
@@ -666,13 +670,27 @@ void CodeTextEditor::_reset_zoom() {
 	if (font.is_valid()) {
 		EditorSettings::get_singleton()->set("interface/editor/code_font_size", 14);
 		font->set_size(14);
+		zoom_nb->set_text("100%");
 	}
 }
 
 void CodeTextEditor::_line_col_changed() {
 
 	line_nb->set_text(itos(text_editor->cursor_get_line() + 1));
-	col_nb->set_text(itos(text_editor->cursor_get_column() + 1));
+
+	String line = text_editor->get_line(text_editor->cursor_get_line());
+
+	int positional_column = 0;
+
+	for (int i = 0; i < text_editor->cursor_get_column(); i++) {
+		if (line[i] == '\t') {
+			positional_column += text_editor->get_indent_size(); //tab size
+		} else {
+			positional_column += 1;
+		}
+	}
+
+	col_nb->set_text(itos(positional_column + 1));
 }
 
 void CodeTextEditor::_text_changed() {
@@ -727,6 +745,9 @@ bool CodeTextEditor::_add_font_size(int p_delta) {
 
 	if (font.is_valid()) {
 		int new_size = CLAMP(font->get_size() + p_delta, 8 * EDSCALE, 96 * EDSCALE);
+
+		zoom_nb->set_text(itos(100 * new_size / 14) + "%");
+
 		if (new_size != font->get_size()) {
 			EditorSettings::get_singleton()->set("interface/editor/code_font_size", new_size / EDSCALE);
 			font->set_size(new_size);
@@ -771,6 +792,14 @@ void CodeTextEditor::set_error(const String &p_error) {
 void CodeTextEditor::_update_font() {
 
 	text_editor->add_font_override("font", get_font("source", "EditorFonts"));
+
+	Ref<Font> status_bar_font = get_font("status_source", "EditorFonts");
+	int count = status_bar->get_child_count();
+	for (int i = 0; i < count; i++) {
+		Control *n = Object::cast_to<Control>(status_bar->get_child(i));
+		if (n)
+			n->add_font_override("font", status_bar_font);
+	}
 }
 
 void CodeTextEditor::_on_settings_change() {
@@ -851,7 +880,7 @@ CodeTextEditor::CodeTextEditor() {
 	text_editor->set_brace_matching(true);
 	text_editor->set_auto_indent(true);
 
-	HBoxContainer *status_bar = memnew(HBoxContainer);
+	status_bar = memnew(HBoxContainer);
 	add_child(status_bar);
 	status_bar->set_h_size_flags(SIZE_EXPAND_FILL);
 
@@ -877,6 +906,24 @@ CodeTextEditor::CodeTextEditor() {
 	find_replace_bar->connect("error", error, "set_text");
 
 	status_bar->add_child(memnew(Label)); //to keep the height if the other labels are not visible
+
+	Label *zoom_txt = memnew(Label);
+	status_bar->add_child(zoom_txt);
+	zoom_txt->set_align(Label::ALIGN_RIGHT);
+	zoom_txt->set_valign(Label::VALIGN_CENTER);
+	zoom_txt->set_v_size_flags(SIZE_FILL);
+	zoom_txt->set_text(TTR("Zoom:"));
+	zoom_txt->add_font_override("font", EditorNode::get_singleton()->get_gui_base()->get_font("status_source", "EditorFonts"));
+
+	zoom_nb = memnew(Label);
+	status_bar->add_child(zoom_nb);
+	zoom_nb->set_valign(Label::VALIGN_CENTER);
+	zoom_nb->set_v_size_flags(SIZE_FILL);
+	zoom_nb->set_autowrap(true); // workaround to prevent resizing the label on each change, do not touch
+	zoom_nb->set_clip_text(true); // workaround to prevent resizing the label on each change, do not touch
+	zoom_nb->set_custom_minimum_size(Size2(60, 1) * EDSCALE);
+	zoom_nb->set_align(Label::ALIGN_RIGHT);
+	zoom_nb->add_font_override("font", EditorNode::get_singleton()->get_gui_base()->get_font("status_source", "EditorFonts"));
 
 	Label *line_txt = memnew(Label);
 	status_bar->add_child(line_txt);
@@ -931,7 +978,8 @@ CodeTextEditor::CodeTextEditor() {
 	code_complete_timer->connect("timeout", this, "_code_complete_timer_timeout");
 
 	font_resize_val = 0;
-	font_size = -1;
+	font_size = EditorSettings::get_singleton()->get("interface/editor/code_font_size");
+	zoom_nb->set_text(itos(100 * font_size / 14) + "%");
 	font_resize_timer = memnew(Timer);
 	add_child(font_resize_timer);
 	font_resize_timer->set_one_shot(true);

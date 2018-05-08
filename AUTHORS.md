@@ -70,12 +70,14 @@ name is available.
     Joshua Grams (JoshuaGrams)
     Juan Linietsky (reduz)
     Julian Murgia (StraToN)
+    Justo Delgado (mrcdk)
     Kostadin Damyanov (Max-Might)
     Leon Krause (eska014)
     Marc Gilleron (Zylann)
     Marcelo Fernandez (marcelofg55)
     Mariano Javier Suligoy (MarianoGnu)
     Mario Schlack (hurikhan)
+    Martin Sjursen (binbitten)
     Masoud BH (masoudbh3)
     Matthias Hölzl (hoelzl)
     Max Hilbrunner (mhilbrunner)
@@ -85,14 +87,17 @@ name is available.
     Ovnuniarchos
     Patrick (firefly2442)
     Paul Batty (Paulb23)
+    Paul Joannon (paulloz)
     Pawel Kowal (pkowal1982)
     Pedro J. Estébanez (RandomShaper)
+    Pieter-Jan Briers (PJB3005)
     Poommetee Ketson (Noshyaar)
     Przemysław Gołąb (n-pigeon)
     Ralf Hölzemer (rollenrolm)
     Ramesh Ravone (RameshRavone)
     Ray Koopa (RayKoopa)
     Rémi Verschelde (akien-mga)
+    Roberto F. Arroyo (robfram)
     Ruslan Mustakov (endragor)
     Saniko (sanikoyes)
     SaracenOne
@@ -104,6 +109,7 @@ name is available.
     Wilhem Barbier (nounoursheureux)
     Will Nations (willnationsdev)
     Wilson E. Alvarez (Rubonnek)
+    Xavier Cho (mysticfall)
     Yuri Roubinski (Chaosus)
     Zher Huei Lee (leezh)
     ZuBsPaCe
@@ -113,7 +119,7 @@ name is available.
     m4nu3lf
     marynate
     mrezai
-    rraallvv
     romulox-x
+    rraallvv
     sersoong
     yg2f (SuperUserNameMan)

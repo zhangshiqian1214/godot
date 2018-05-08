@@ -148,6 +148,7 @@ public:
 	//TODO: send a resource for editing to the editor node?
 
 	void add_control_to_container(CustomControlContainer p_location, Control *p_control);
+	void remove_control_from_container(CustomControlContainer p_location, Control *p_control);
 	ToolButton *add_control_to_bottom_panel(Control *p_control, const String &p_title);
 	void add_control_to_dock(DockSlot p_slot, Control *p_control);
 	void remove_control_from_docks(Control *p_control);
@@ -166,6 +167,7 @@ public:
 	void notify_main_screen_changed(const String &screen_name);
 	void notify_scene_changed(const Node *scn_root);
 	void notify_scene_closed(const String &scene_filepath);
+	void notify_resource_saved(const Ref<Resource> &p_resource);
 
 	virtual Ref<SpatialEditorGizmo> create_spatial_gizmo(Spatial *p_spatial);
 	virtual bool forward_canvas_gui_input(const Ref<InputEvent> &p_event);
@@ -210,6 +212,9 @@ public:
 
 	void add_scene_import_plugin(const Ref<EditorSceneImporter> &p_importer);
 	void remove_scene_import_plugin(const Ref<EditorSceneImporter> &p_importer);
+
+	void add_autoload_singleton(const String &p_name, const String &p_path);
+	void remove_autoload_singleton(const String &p_name);
 
 	EditorPlugin();
 	virtual ~EditorPlugin();

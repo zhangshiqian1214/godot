@@ -60,8 +60,8 @@ Ref<Script> GDScriptLanguage::get_template(const String &p_class_name, const Str
 					   "# var a = 2\n" +
 					   "# var b = \"textvar\"\n\n" +
 					   "func _ready():\n" +
-					   "%TS%# Called every time the node is added to the scene.\n" +
-					   "%TS%# Initialization here\n" +
+					   "%TS%# Called when the node is added to the scene for the first time.\n" +
+					   "%TS%# Initialization here.\n" +
 					   "%TS%pass\n\n" +
 					   "#func _process(delta):\n" +
 					   "#%TS%# Called every frame. Delta is time since last frame.\n" +
@@ -369,8 +369,8 @@ void GDScriptLanguage::get_public_functions(List<MethodInfo> *p_functions) const
 		mi.name = "yield";
 		mi.arguments.push_back(PropertyInfo(Variant::OBJECT, "object"));
 		mi.arguments.push_back(PropertyInfo(Variant::STRING, "signal"));
-		mi.default_arguments.push_back(Variant::NIL);
-		mi.default_arguments.push_back(Variant::STRING);
+		mi.default_arguments.push_back(Variant());
+		mi.default_arguments.push_back(String());
 		mi.return_val = PropertyInfo(Variant::OBJECT, "", PROPERTY_HINT_RESOURCE_TYPE, "GDScriptFunctionState");
 		p_functions->push_back(mi);
 	}
@@ -410,13 +410,11 @@ String GDScriptLanguage::make_function(const String &p_class, const String &p_na
 
 	String s = "func " + p_name + "(";
 	if (p_args.size()) {
-		s += " ";
 		for (int i = 0; i < p_args.size(); i++) {
 			if (i > 0)
 				s += ", ";
 			s += p_args[i].get_slice(":", 0);
 		}
-		s += " ";
 	}
 	s += "):\n" + _get_indentation() + "pass # replace with function body\n";
 
@@ -432,6 +430,9 @@ struct GDScriptCompletionIdentifier {
 	Ref<GDScript> script;
 	Variant::Type type;
 	Variant value; //im case there is a value, also return it
+
+	GDScriptCompletionIdentifier() :
+			type(Variant::NIL) {}
 };
 
 static GDScriptCompletionIdentifier _get_type_from_variant(const Variant &p_variant, bool p_allow_gdnative_class = false) {
@@ -553,9 +554,7 @@ static Ref<Reference> _get_parent_class(GDScriptCompletionContext &context) {
 
 static GDScriptCompletionIdentifier _get_native_class(GDScriptCompletionContext &context) {
 
-	//eeh...
 	GDScriptCompletionIdentifier id;
-	id.type = Variant::NIL;
 
 	REF pc = _get_parent_class(context);
 	if (!pc.is_valid()) {
@@ -1335,13 +1334,23 @@ static void _find_identifiers_in_block(GDScriptCompletionContext &context, int p
 
 	for (int i = 0; i < context.block->statements.size(); i++) {
 
-		if (context.block->statements[i]->line > p_line)
+		GDScriptParser::Node *statement = context.block->statements[i];
+		if (statement->line > p_line)
 			continue;
 
-		if (context.block->statements[i]->type == GDScriptParser::BlockNode::TYPE_LOCAL_VAR) {
+		GDScriptParser::BlockNode::Type statementType = statement->type;
+		if (statementType == GDScriptParser::BlockNode::TYPE_LOCAL_VAR) {
 
-			const GDScriptParser::LocalVarNode *lv = static_cast<const GDScriptParser::LocalVarNode *>(context.block->statements[i]);
+			const GDScriptParser::LocalVarNode *lv = static_cast<const GDScriptParser::LocalVarNode *>(statement);
 			result.insert(lv->name.operator String());
+		} else if (statementType == GDScriptParser::BlockNode::TYPE_CONTROL_FLOW) {
+
+			const GDScriptParser::ControlFlowNode *cf = static_cast<const GDScriptParser::ControlFlowNode *>(statement);
+			if (cf->cf_type == GDScriptParser::ControlFlowNode::CF_FOR) {
+
+				const GDScriptParser::IdentifierNode *id = static_cast<const GDScriptParser::IdentifierNode *>(cf->arguments[0]);
+				result.insert(id->name.operator String());
+			}
 		}
 	}
 }
@@ -1511,6 +1520,13 @@ static void _find_identifiers(GDScriptCompletionContext &context, int p_line, bo
 
 	for (int i = 0; i < Variant::VARIANT_MAX; i++) {
 		result.insert(_type_names[i]);
+	}
+
+	List<String> reserved_words;
+	GDScriptLanguage::get_singleton()->get_reserved_words(&reserved_words);
+
+	for (List<String>::Element *E = reserved_words.front(); E; E = E->next()) {
+		result.insert(E->get());
 	}
 
 	//autoload singletons
@@ -2633,6 +2649,18 @@ Error GDScriptLanguage::lookup_code(const String &p_code, const String &p_symbol
 	context.function = p.get_completion_function();
 	context.base = p_owner;
 	context.base_path = p_base_path;
+
+	if (context._class && context._class->extends_class.size() > 0) {
+		bool success = false;
+		ClassDB::get_integer_constant(context._class->extends_class[0], p_symbol, &success);
+		if (success) {
+			r_result.type = ScriptLanguage::LookupResult::RESULT_CLASS_CONSTANT;
+			r_result.class_name = context._class->extends_class[0];
+			r_result.class_member = p_symbol;
+			return OK;
+		}
+	}
+
 	bool isfunction = false;
 
 	switch (p.get_completion_type()) {
@@ -2852,7 +2880,24 @@ Error GDScriptLanguage::lookup_code(const String &p_code, const String &p_symbol
 							return OK;
 						}
 					} else {
-						r_result.type = ScriptLanguage::LookupResult::RESULT_CLASS_CONSTANT;
+						/*
+						// Because get_integer_constant_enum and get_integer_constant dont work on @GlobalScope
+						// We cannot determine the exact nature of the identifier here
+						// Otherwise these codes would work
+						StringName enumName = ClassDB::get_integer_constant_enum("@GlobalScope", p_symbol, true);
+						if (enumName != NULL) {
+							r_result.type = ScriptLanguage::LookupResult::RESULT_CLASS_ENUM;
+							r_result.class_name = "@GlobalScope";
+							r_result.class_member = enumName;
+							return OK;
+						}
+						else {
+							r_result.type = ScriptLanguage::LookupResult::RESULT_CLASS_CONSTANT;
+							r_result.class_name = "@GlobalScope";
+							r_result.class_member = p_symbol;
+							return OK;
+						}*/
+						r_result.type = ScriptLanguage::LookupResult::RESULT_CLASS_TBD_GLOBALSCOPE;
 						r_result.class_name = "@GlobalScope";
 						r_result.class_member = p_symbol;
 						return OK;
@@ -2912,6 +2957,14 @@ Error GDScriptLanguage::lookup_code(const String &p_code, const String &p_symbol
 						r_result.type = ScriptLanguage::LookupResult::RESULT_CLASS_METHOD;
 						r_result.class_name = t.obj_type;
 						r_result.class_member = p_symbol;
+						return OK;
+					}
+
+					StringName enumName = ClassDB::get_integer_constant_enum(t.obj_type, p_symbol, true);
+					if (enumName != StringName()) {
+						r_result.type = ScriptLanguage::LookupResult::RESULT_CLASS_ENUM;
+						r_result.class_name = t.obj_type;
+						r_result.class_member = enumName;
 						return OK;
 					}
 

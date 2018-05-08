@@ -1124,7 +1124,7 @@ Error ResourceFormatLoaderBinary::rename_dependencies(const String &p_path, cons
 		DirAccess *da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 		da->remove(p_path + ".depren");
 		memdelete(da);
-		//fuck it, use the old approach;
+		//use the old approach
 
 		WARN_PRINT(("This file is old, so it can't refactor dependencies, opening and resaving: " + p_path).utf8().get_data());
 
@@ -1162,9 +1162,11 @@ Error ResourceFormatLoaderBinary::rename_dependencies(const String &p_path, cons
 		ERR_FAIL_V(ERR_FILE_UNRECOGNIZED);
 	}
 
-	fw->store_32(VERSION_MAJOR); //current version
-	fw->store_32(VERSION_MINOR);
-	fw->store_32(FORMAT_VERSION);
+	// Since we're not actually converting the file contents, leave the version
+	// numbers in the file untouched.
+	fw->store_32(ver_major);
+	fw->store_32(ver_minor);
+	fw->store_32(ver_format);
 
 	save_ustring(fw, get_ustring(f)); //type
 

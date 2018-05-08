@@ -153,9 +153,9 @@ struct _VariantCall {
 		funcdata.func = p_func;
 		funcdata.default_args = p_defaultarg;
 		funcdata._const = p_const;
+		funcdata.returns = p_has_return;
 #ifdef DEBUG_ENABLED
 		funcdata.return_type = p_return;
-		funcdata.returns = p_has_return;
 #endif
 
 		if (p_argtype1.name) {
@@ -264,6 +264,8 @@ struct _VariantCall {
 	VCALL_LOCALMEM1R(String, right);
 	VCALL_LOCALMEM0R(String, dedent);
 	VCALL_LOCALMEM2R(String, strip_edges);
+	VCALL_LOCALMEM1R(String, lstrip);
+	VCALL_LOCALMEM1R(String, rstrip);
 	VCALL_LOCALMEM0R(String, get_extension);
 	VCALL_LOCALMEM0R(String, get_basename);
 	VCALL_LOCALMEM1R(String, plus_file);
@@ -296,6 +298,8 @@ struct _VariantCall {
 	VCALL_LOCALMEM0R(String, hex_to_int);
 	VCALL_LOCALMEM1R(String, pad_decimals);
 	VCALL_LOCALMEM1R(String, pad_zeros);
+	VCALL_LOCALMEM1R(String, trim_prefix);
+	VCALL_LOCALMEM1R(String, trim_suffix);
 
 	static void _call_String_to_ascii(Variant &r_ret, Variant &p_self, const Variant **p_args) {
 
@@ -340,6 +344,8 @@ struct _VariantCall {
 	VCALL_LOCALMEM1R(Vector2, rotated);
 	VCALL_LOCALMEM0R(Vector2, tangent);
 	VCALL_LOCALMEM0R(Vector2, floor);
+	VCALL_LOCALMEM0R(Vector2, ceil);
+	VCALL_LOCALMEM0R(Vector2, round);
 	VCALL_LOCALMEM1R(Vector2, snapped);
 	VCALL_LOCALMEM0R(Vector2, aspect);
 	VCALL_LOCALMEM1R(Vector2, dot);
@@ -347,7 +353,7 @@ struct _VariantCall {
 	VCALL_LOCALMEM1R(Vector2, bounce);
 	VCALL_LOCALMEM1R(Vector2, reflect);
 	VCALL_LOCALMEM0R(Vector2, angle);
-	//VCALL_LOCALMEM1R(Vector2,cross);
+	VCALL_LOCALMEM1R(Vector2, cross);
 	VCALL_LOCALMEM0R(Vector2, abs);
 	VCALL_LOCALMEM1R(Vector2, clamped);
 
@@ -382,6 +388,7 @@ struct _VariantCall {
 	VCALL_LOCALMEM0R(Vector3, abs);
 	VCALL_LOCALMEM0R(Vector3, floor);
 	VCALL_LOCALMEM0R(Vector3, ceil);
+	VCALL_LOCALMEM0R(Vector3, round);
 	VCALL_LOCALMEM1R(Vector3, distance_to);
 	VCALL_LOCALMEM1R(Vector3, distance_squared_to);
 	VCALL_LOCALMEM1R(Vector3, angle_to);
@@ -443,6 +450,7 @@ struct _VariantCall {
 	VCALL_LOCALMEM1R(Color, lightened);
 	VCALL_LOCALMEM1R(Color, darkened);
 	VCALL_LOCALMEM1R(Color, to_html);
+	VCALL_LOCALMEM4R(Color, from_hsv);
 
 	VCALL_LOCALMEM0R(RID, get_id);
 
@@ -464,7 +472,7 @@ struct _VariantCall {
 	VCALL_LOCALMEM0R(Dictionary, hash);
 	VCALL_LOCALMEM0R(Dictionary, keys);
 	VCALL_LOCALMEM0R(Dictionary, values);
-	VCALL_LOCALMEM0R(Dictionary, duplicate);
+	VCALL_LOCALMEM1R(Dictionary, duplicate);
 
 	VCALL_LOCALMEM2(Array, set);
 	VCALL_LOCALMEM1R(Array, get);
@@ -490,9 +498,10 @@ struct _VariantCall {
 	VCALL_LOCALMEM1(Array, erase);
 	VCALL_LOCALMEM0(Array, sort);
 	VCALL_LOCALMEM2(Array, sort_custom);
+	VCALL_LOCALMEM0(Array, shuffle);
 	VCALL_LOCALMEM2R(Array, bsearch);
 	VCALL_LOCALMEM4R(Array, bsearch_custom);
-	VCALL_LOCALMEM0R(Array, duplicate);
+	VCALL_LOCALMEM1R(Array, duplicate);
 	VCALL_LOCALMEM0(Array, invert);
 
 	static void _call_PoolByteArray_get_string_from_ascii(Variant &r_ret, Variant &p_self, const Variant **p_args) {
@@ -1458,6 +1467,8 @@ void register_variant_methods() {
 	ADDFUNC1R(STRING, STRING, String, left, INT, "position", varray());
 	ADDFUNC1R(STRING, STRING, String, right, INT, "position", varray());
 	ADDFUNC2R(STRING, STRING, String, strip_edges, BOOL, "left", BOOL, "right", varray(true, true));
+	ADDFUNC1R(STRING, STRING, String, lstrip, STRING, "chars", varray());
+	ADDFUNC1R(STRING, STRING, String, rstrip, STRING, "chars", varray());
 	ADDFUNC0R(STRING, STRING, String, get_extension, varray());
 	ADDFUNC0R(STRING, STRING, String, get_basename, varray());
 	ADDFUNC1R(STRING, STRING, String, plus_file, STRING, "file", varray());
@@ -1491,6 +1502,8 @@ void register_variant_methods() {
 	ADDFUNC0R(STRING, INT, String, hex_to_int, varray());
 	ADDFUNC1R(STRING, STRING, String, pad_decimals, INT, "digits", varray());
 	ADDFUNC1R(STRING, STRING, String, pad_zeros, INT, "digits", varray());
+	ADDFUNC1R(STRING, STRING, String, trim_prefix, STRING, "prefix", varray());
+	ADDFUNC1R(STRING, STRING, String, trim_suffix, STRING, "suffix", varray());
 
 	ADDFUNC0R(STRING, POOL_BYTE_ARRAY, String, to_ascii, varray());
 	ADDFUNC0R(STRING, POOL_BYTE_ARRAY, String, to_utf8, varray());
@@ -1509,13 +1522,15 @@ void register_variant_methods() {
 	ADDFUNC1R(VECTOR2, VECTOR2, Vector2, rotated, REAL, "phi", varray());
 	ADDFUNC0R(VECTOR2, VECTOR2, Vector2, tangent, varray());
 	ADDFUNC0R(VECTOR2, VECTOR2, Vector2, floor, varray());
+	ADDFUNC0R(VECTOR2, VECTOR2, Vector2, ceil, varray());
+	ADDFUNC0R(VECTOR2, VECTOR2, Vector2, round, varray());
 	ADDFUNC1R(VECTOR2, VECTOR2, Vector2, snapped, VECTOR2, "by", varray());
 	ADDFUNC0R(VECTOR2, REAL, Vector2, aspect, varray());
 	ADDFUNC1R(VECTOR2, REAL, Vector2, dot, VECTOR2, "with", varray());
 	ADDFUNC1R(VECTOR2, VECTOR2, Vector2, slide, VECTOR2, "n", varray());
 	ADDFUNC1R(VECTOR2, VECTOR2, Vector2, bounce, VECTOR2, "n", varray());
 	ADDFUNC1R(VECTOR2, VECTOR2, Vector2, reflect, VECTOR2, "n", varray());
-	//ADDFUNC1R(VECTOR2,REAL,Vector2,cross,VECTOR2,"with",varray());
+	ADDFUNC1R(VECTOR2, REAL, Vector2, cross, VECTOR2, "with", varray());
 	ADDFUNC0R(VECTOR2, VECTOR2, Vector2, abs, varray());
 	ADDFUNC1R(VECTOR2, VECTOR2, Vector2, clamped, REAL, "length", varray());
 
@@ -1550,6 +1565,7 @@ void register_variant_methods() {
 	ADDFUNC0R(VECTOR3, VECTOR3, Vector3, abs, varray());
 	ADDFUNC0R(VECTOR3, VECTOR3, Vector3, floor, varray());
 	ADDFUNC0R(VECTOR3, VECTOR3, Vector3, ceil, varray());
+	ADDFUNC0R(VECTOR3, VECTOR3, Vector3, round, varray());
 	ADDFUNC1R(VECTOR3, REAL, Vector3, distance_to, VECTOR3, "b", varray());
 	ADDFUNC1R(VECTOR3, REAL, Vector3, distance_squared_to, VECTOR3, "b", varray());
 	ADDFUNC1R(VECTOR3, REAL, Vector3, angle_to, VECTOR3, "to", varray());
@@ -1589,6 +1605,7 @@ void register_variant_methods() {
 	ADDFUNC1R(COLOR, COLOR, Color, lightened, REAL, "amount", varray());
 	ADDFUNC1R(COLOR, COLOR, Color, darkened, REAL, "amount", varray());
 	ADDFUNC1R(COLOR, STRING, Color, to_html, BOOL, "with_alpha", varray(true));
+	ADDFUNC4R(COLOR, COLOR, Color, from_hsv, REAL, "h", REAL, "s", REAL, "v", REAL, "a", varray(1.0));
 
 	ADDFUNC0R(_RID, INT, RID, get_id, varray());
 
@@ -1610,7 +1627,7 @@ void register_variant_methods() {
 	ADDFUNC0R(DICTIONARY, INT, Dictionary, hash, varray());
 	ADDFUNC0R(DICTIONARY, ARRAY, Dictionary, keys, varray());
 	ADDFUNC0R(DICTIONARY, ARRAY, Dictionary, values, varray());
-	ADDFUNC0R(DICTIONARY, DICTIONARY, Dictionary, duplicate, varray());
+	ADDFUNC1R(DICTIONARY, DICTIONARY, Dictionary, duplicate, BOOL, "deep", varray(false));
 
 	ADDFUNC0R(ARRAY, INT, Array, size, varray());
 	ADDFUNC0R(ARRAY, BOOL, Array, empty, varray());
@@ -1634,10 +1651,11 @@ void register_variant_methods() {
 	ADDFUNC0RNC(ARRAY, NIL, Array, pop_front, varray());
 	ADDFUNC0NC(ARRAY, NIL, Array, sort, varray());
 	ADDFUNC2NC(ARRAY, NIL, Array, sort_custom, OBJECT, "obj", STRING, "func", varray());
+	ADDFUNC0NC(ARRAY, NIL, Array, shuffle, varray());
 	ADDFUNC2R(ARRAY, INT, Array, bsearch, NIL, "value", BOOL, "before", varray(true));
 	ADDFUNC4R(ARRAY, INT, Array, bsearch_custom, NIL, "value", OBJECT, "obj", STRING, "func", BOOL, "before", varray(true));
 	ADDFUNC0NC(ARRAY, NIL, Array, invert, varray());
-	ADDFUNC0RNC(ARRAY, ARRAY, Array, duplicate, varray());
+	ADDFUNC1R(ARRAY, ARRAY, Array, duplicate, BOOL, "deep", varray(false));
 
 	ADDFUNC0R(POOL_BYTE_ARRAY, INT, PoolByteArray, size, varray());
 	ADDFUNC2(POOL_BYTE_ARRAY, NIL, PoolByteArray, set, INT, "idx", INT, "byte", varray());

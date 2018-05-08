@@ -61,6 +61,7 @@ class TileMapEditor : public VBoxContainer {
 		TOOL_BUCKET,
 		TOOL_PICKING,
 		TOOL_DUPLICATING,
+		TOOL_MOVING
 	};
 
 	enum Options {
@@ -71,6 +72,8 @@ class TileMapEditor : public VBoxContainer {
 		OPTION_DUPLICATE,
 		OPTION_ERASE_SELECTION,
 		OPTION_PAINTING,
+		OPTION_FIX_INVALID,
+		OPTION_MOVE
 	};
 
 	TileMap *node;
@@ -122,12 +125,11 @@ class TileMapEditor : public VBoxContainer {
 		bool yf;
 		bool tr;
 
-		CellOp() {
-			idx = -1;
-			xf = false;
-			yf = false;
-			tr = false;
-		}
+		CellOp() :
+				idx(TileMap::INVALID_CELL),
+				xf(false),
+				yf(false),
+				tr(false) {}
 	};
 
 	Map<Point2i, CellOp> paint_undo;
@@ -138,8 +140,12 @@ class TileMapEditor : public VBoxContainer {
 		bool flip_h;
 		bool flip_v;
 		bool transpose;
-		int auto_x;
-		int auto_y;
+
+		TileData() :
+				cell(TileMap::INVALID_CELL),
+				flip_h(false),
+				flip_v(false),
+				transpose(false) {}
 	};
 
 	List<TileData> copydata;

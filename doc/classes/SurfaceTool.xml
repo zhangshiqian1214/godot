@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="SurfaceTool" inherits="Reference" category="Core" version="3.0-stable">
+<class name="SurfaceTool" inherits="Reference" category="Core" version="3.1">
 	<brief_description>
 		Helper tool to create geometry.
 	</brief_description>
@@ -196,8 +196,11 @@
 		<method name="generate_normals">
 			<return type="void">
 			</return>
+			<argument index="0" name="flip" type="bool" default="false">
+			</argument>
 			<description>
 				Generates normals from Vertices so you do not have to do it manually.
+				Setting "flip" [code]true[/code] inverts resulting normals.
 			</description>
 		</method>
 		<method name="generate_tangents">

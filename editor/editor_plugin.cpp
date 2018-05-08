@@ -125,7 +125,7 @@ Vector<Ref<Texture> > EditorInterface::make_mesh_previews(const Vector<Ref<Mesh>
 		xform.origin.z -= rot_aabb.size.z * 2;
 		RID inst = VS::get_singleton()->instance_create2(mesh->get_rid(), scenario);
 		VS::get_singleton()->instance_set_transform(inst, xform);
-		ep.step(TTR("Thumbnail.."), i);
+		ep.step(TTR("Thumbnail..."), i);
 		Main::iteration();
 		Main::iteration();
 		Ref<Image> img = VS::get_singleton()->texture_get_data(viewport_texture);
@@ -301,6 +301,14 @@ void EditorPlugin::remove_custom_type(const String &p_type) {
 	EditorNode::get_editor_data().remove_custom_type(p_type);
 }
 
+void EditorPlugin::add_autoload_singleton(const String &p_name, const String &p_path) {
+	EditorNode::get_singleton()->get_project_settings()->get_autoload_settings()->autoload_add(p_name, p_path);
+}
+
+void EditorPlugin::remove_autoload_singleton(const String &p_name) {
+	EditorNode::get_singleton()->get_project_settings()->get_autoload_settings()->autoload_remove(p_name);
+}
+
 ToolButton *EditorPlugin::add_control_to_bottom_panel(Control *p_control, const String &p_title) {
 
 	return EditorNode::get_singleton()->add_bottom_panel_item(p_title, p_control);
@@ -373,22 +381,66 @@ void EditorPlugin::add_control_to_container(CustomControlContainer p_location, C
 	}
 }
 
-void EditorPlugin::add_tool_menu_item(const String &p_name, Object *p_handler, const String &p_callback, const Variant &p_ud) {
+void EditorPlugin::remove_control_from_container(CustomControlContainer p_location, Control *p_control) {
 
-	//EditorNode::get_singleton()->add_tool_menu_item(p_name, p_handler, p_callback, p_ud);
+	switch (p_location) {
+
+		case CONTAINER_TOOLBAR: {
+
+			EditorNode::get_menu_hb()->remove_child(p_control);
+		} break;
+
+		case CONTAINER_SPATIAL_EDITOR_MENU: {
+
+			SpatialEditor::get_singleton()->remove_control_from_menu_panel(p_control);
+
+		} break;
+		case CONTAINER_SPATIAL_EDITOR_SIDE: {
+
+			SpatialEditor::get_singleton()->get_palette_split()->remove_child(p_control);
+
+		} break;
+		case CONTAINER_SPATIAL_EDITOR_BOTTOM: {
+
+			SpatialEditor::get_singleton()->get_shader_split()->remove_child(p_control);
+
+		} break;
+		case CONTAINER_CANVAS_EDITOR_MENU: {
+
+			CanvasItemEditor::get_singleton()->remove_control_from_menu_panel(p_control);
+
+		} break;
+		case CONTAINER_CANVAS_EDITOR_SIDE: {
+
+			CanvasItemEditor::get_singleton()->get_palette_split()->remove_child(p_control);
+
+		} break;
+		case CONTAINER_CANVAS_EDITOR_BOTTOM: {
+
+			CanvasItemEditor::get_singleton()->get_bottom_split()->remove_child(p_control);
+
+		} break;
+		case CONTAINER_PROPERTY_EDITOR_BOTTOM: {
+
+			EditorNode::get_singleton()->get_property_editor_vb()->remove_child(p_control);
+
+		} break;
+	}
+}
+
+void EditorPlugin::add_tool_menu_item(const String &p_name, Object *p_handler, const String &p_callback, const Variant &p_ud) {
+	EditorNode::get_singleton()->add_tool_menu_item(p_name, p_handler, p_callback, p_ud);
 }
 
 void EditorPlugin::add_tool_submenu_item(const String &p_name, Object *p_submenu) {
-
 	ERR_FAIL_NULL(p_submenu);
 	PopupMenu *submenu = Object::cast_to<PopupMenu>(p_submenu);
 	ERR_FAIL_NULL(submenu);
-	//EditorNode::get_singleton()->add_tool_submenu_item(p_name, submenu);
+	EditorNode::get_singleton()->add_tool_submenu_item(p_name, submenu);
 }
 
 void EditorPlugin::remove_tool_menu_item(const String &p_name) {
-
-	//EditorNode::get_singleton()->remove_tool_menu_item(p_name);
+	EditorNode::get_singleton()->remove_tool_menu_item(p_name);
 }
 
 void EditorPlugin::set_input_event_forwarding_always_enabled() {
@@ -419,6 +471,10 @@ void EditorPlugin::notify_main_screen_changed(const String &screen_name) {
 
 void EditorPlugin::notify_scene_closed(const String &scene_filepath) {
 	emit_signal("scene_closed", scene_filepath);
+}
+
+void EditorPlugin::notify_resource_saved(const Ref<Resource> &p_resource) {
+	emit_signal("resource_saved", p_resource);
 }
 
 Ref<SpatialEditorGizmo> EditorPlugin::create_spatial_gizmo(Spatial *p_spatial) {
@@ -651,11 +707,15 @@ void EditorPlugin::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_control_to_dock", "slot", "control"), &EditorPlugin::add_control_to_dock);
 	ClassDB::bind_method(D_METHOD("remove_control_from_docks", "control"), &EditorPlugin::remove_control_from_docks);
 	ClassDB::bind_method(D_METHOD("remove_control_from_bottom_panel", "control"), &EditorPlugin::remove_control_from_bottom_panel);
-	//ClassDB::bind_method(D_METHOD("add_tool_menu_item", "name", "handler", "callback", "ud"),&EditorPlugin::add_tool_menu_item,DEFVAL(Variant()));
+	ClassDB::bind_method(D_METHOD("remove_control_from_container", "container", "control"), &EditorPlugin::remove_control_from_container);
+	ClassDB::bind_method(D_METHOD("add_tool_menu_item", "name", "handler", "callback", "ud"), &EditorPlugin::add_tool_menu_item, DEFVAL(Variant()));
 	ClassDB::bind_method(D_METHOD("add_tool_submenu_item", "name", "submenu"), &EditorPlugin::add_tool_submenu_item);
-	//ClassDB::bind_method(D_METHOD("remove_tool_menu_item", "name"),&EditorPlugin::remove_tool_menu_item);
+	ClassDB::bind_method(D_METHOD("remove_tool_menu_item", "name"), &EditorPlugin::remove_tool_menu_item);
 	ClassDB::bind_method(D_METHOD("add_custom_type", "type", "base", "script", "icon"), &EditorPlugin::add_custom_type);
 	ClassDB::bind_method(D_METHOD("remove_custom_type", "type"), &EditorPlugin::remove_custom_type);
+
+	ClassDB::bind_method(D_METHOD("add_autoload_singleton", "name", "path"), &EditorPlugin::add_autoload_singleton);
+	ClassDB::bind_method(D_METHOD("remove_autoload_singleton", "name"), &EditorPlugin::remove_autoload_singleton);
 
 	ClassDB::bind_method(D_METHOD("update_overlays"), &EditorPlugin::update_overlays);
 
@@ -701,6 +761,7 @@ void EditorPlugin::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("scene_changed", PropertyInfo(Variant::OBJECT, "scene_root", PROPERTY_HINT_RESOURCE_TYPE, "Node")));
 	ADD_SIGNAL(MethodInfo("scene_closed", PropertyInfo(Variant::STRING, "filepath")));
 	ADD_SIGNAL(MethodInfo("main_screen_changed", PropertyInfo(Variant::STRING, "screen_name")));
+	ADD_SIGNAL(MethodInfo("resource_saved", PropertyInfo(Variant::OBJECT, "resource", PROPERTY_HINT_RESOURCE_TYPE, "Resource")));
 
 	BIND_ENUM_CONSTANT(CONTAINER_TOOLBAR);
 	BIND_ENUM_CONSTANT(CONTAINER_SPATIAL_EDITOR_MENU);

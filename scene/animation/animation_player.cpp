@@ -182,8 +182,8 @@ void AnimationPlayer::_notification(int p_what) {
 			if (!processing) {
 				//make sure that a previous process state was not saved
 				//only process if "processing" is set
-				set_physics_process(false);
-				set_process(false);
+				set_physics_process_internal(false);
+				set_process_internal(false);
 			}
 			//_set_process(false);
 			clear_caches();
@@ -246,8 +246,9 @@ void AnimationPlayer::_ensure_node_caches(AnimationData *p_anim) {
 
 		if (a->track_get_path(i).get_subname_count() == 1 && Object::cast_to<Skeleton>(child)) {
 
-			bone_idx = Object::cast_to<Skeleton>(child)->find_bone(a->track_get_path(i).get_subname(0));
-			if (bone_idx == -1) {
+			Skeleton *sk = Object::cast_to<Skeleton>(child);
+			bone_idx = sk->find_bone(a->track_get_path(i).get_subname(0));
+			if (bone_idx == -1 || sk->is_bone_ignore_animation(bone_idx)) {
 
 				continue;
 			}
@@ -579,20 +580,16 @@ void AnimationPlayer::_animation_process2(float p_delta) {
 }
 
 void AnimationPlayer::_animation_update_transforms() {
+	{
+		Transform t;
+		for (int i = 0; i < cache_update_size; i++) {
 
-	for (int i = 0; i < cache_update_size; i++) {
+			TrackNodeCache *nc = cache_update[i];
 
-		TrackNodeCache *nc = cache_update[i];
+			ERR_CONTINUE(nc->accum_pass != accum_pass);
 
-		ERR_CONTINUE(nc->accum_pass != accum_pass);
-
-		if (nc->spatial) {
-
-			Transform t;
 			t.origin = nc->loc_accum;
-			t.basis = nc->rot_accum;
-			t.basis.scale(nc->scale_accum);
-
+			t.basis.set_quat_scale(nc->rot_accum, nc->scale_accum);
 			if (nc->skeleton && nc->bone_idx >= 0) {
 
 				nc->skeleton->set_bone_pose(nc->bone_idx, t);
@@ -1010,6 +1007,7 @@ void AnimationPlayer::stop(bool p_reset) {
 	c.blend.clear();
 	if (p_reset) {
 		c.current.from = NULL;
+		c.current.speed_scale = 1;
 	}
 	_set_process(false);
 	queued.clear();
@@ -1023,6 +1021,13 @@ void AnimationPlayer::set_speed_scale(float p_speed) {
 float AnimationPlayer::get_speed_scale() const {
 
 	return speed_scale;
+}
+float AnimationPlayer::get_playing_speed() const {
+
+	if (!playing) {
+		return 0;
+	}
+	return speed_scale * playback.current.speed_scale;
 }
 
 void AnimationPlayer::seek(float p_time, bool p_update) {
@@ -1202,7 +1207,7 @@ NodePath AnimationPlayer::get_root() const {
 void AnimationPlayer::get_argument_options(const StringName &p_function, int p_idx, List<String> *r_options) const {
 
 	String pf = p_function;
-	if (p_function == "play" || p_function == "remove_animation" || p_function == "has_animation" || p_function == "queue") {
+	if (p_function == "play" || p_function == "play_backwards" || p_function == "remove_animation" || p_function == "has_animation" || p_function == "queue") {
 		List<StringName> al;
 		get_animation_list(&al);
 		for (List<StringName>::Element *E = al.front(); E; E = E->next()) {
@@ -1315,6 +1320,7 @@ void AnimationPlayer::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_speed_scale", "speed"), &AnimationPlayer::set_speed_scale);
 	ClassDB::bind_method(D_METHOD("get_speed_scale"), &AnimationPlayer::get_speed_scale);
+	ClassDB::bind_method(D_METHOD("get_playing_speed"), &AnimationPlayer::get_playing_speed);
 
 	ClassDB::bind_method(D_METHOD("set_autoplay", "name"), &AnimationPlayer::set_autoplay);
 	ClassDB::bind_method(D_METHOD("get_autoplay"), &AnimationPlayer::get_autoplay);
