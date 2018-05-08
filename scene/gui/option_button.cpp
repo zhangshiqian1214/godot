@@ -108,13 +108,13 @@ void OptionButton::pressed() {
 
 void OptionButton::add_icon_item(const Ref<Texture> &p_icon, const String &p_label, int p_ID) {
 
-	popup->add_icon_check_item(p_icon, p_label, p_ID);
+	popup->add_icon_radio_check_item(p_icon, p_label, p_ID);
 	if (popup->get_item_count() == 1)
 		select(0);
 }
 void OptionButton::add_item(const String &p_label, int p_ID) {
 
-	popup->add_check_item(p_label, p_ID);
+	popup->add_radio_check_item(p_label, p_ID);
 	if (popup->get_item_count() == 1)
 		select(0);
 }
@@ -318,8 +318,9 @@ void OptionButton::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_set_items"), &OptionButton::_set_items);
 	ClassDB::bind_method(D_METHOD("_get_items"), &OptionButton::_get_items);
 
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "selected"), "_select_int", "get_selected");
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "items", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "_set_items", "_get_items");
+	// "selected" property must come after "items", otherwise GH-10213 occurs
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "selected"), "_select_int", "get_selected");
 	ADD_SIGNAL(MethodInfo("item_selected", PropertyInfo(Variant::INT, "ID")));
 }
 

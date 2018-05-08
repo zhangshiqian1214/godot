@@ -1149,15 +1149,13 @@ void AnimationKeyEditor::_track_editor_draw() {
 		get_icon("KeyCall", "EditorIcons")
 	};
 
+	Ref<Texture> valid_icon = get_icon("KeyValid", "EditorIcons");
 	Ref<Texture> invalid_icon = get_icon("KeyInvalid", "EditorIcons");
-	Ref<Texture> invalid_icon_hover = get_icon("KeyInvalidHover", "EditorIcons");
+	const Color modulate_selected = Color(0x84 / 255.0, 0xc2 / 255.0, 0xff / 255.0);
 
 	Ref<Texture> hsize_icon = get_icon("Hsize", "EditorIcons");
 
-	Ref<Texture> type_hover = get_icon("KeyHover", "EditorIcons");
-	Ref<Texture> type_selected = get_icon("KeySelected", "EditorIcons");
-
-	int right_separator_ofs = down_icon->get_width() * 3 + add_key_icon->get_width() + interp_icon[0]->get_width() + wrap_icon[0]->get_width() + cont_icon[0]->get_width() + hsep * 9;
+	int right_separator_ofs = right_data_size_cache;
 
 	int h = font->get_height() + sep;
 
@@ -1359,7 +1357,7 @@ void AnimationKeyEditor::_track_editor_draw() {
 		Color ncol = color;
 		if (n && editor_selection->is_selected(n))
 			ncol = track_select_color;
-		te->draw_string(font, Point2(ofs + Point2(left_check_ofs + sep + type_icon[0]->get_width() + sep, y + font->get_ascent() + (sep / 2))).floor(), np, ncol, name_limit - (type_icon[0]->get_width() + sep) - 5);
+		te->draw_string(font, Point2(ofs + Point2(left_check_ofs + sep + type_icon[0]->get_width() + sep, y + font->get_ascent() + (sep / 2))).floor(), np, ncol, name_limit - (left_check_ofs + sep) - (type_icon[0]->get_width() + sep) - 5);
 
 		// Draw separator line below track area
 		if (!obj)
@@ -1464,6 +1462,10 @@ void AnimationKeyEditor::_track_editor_draw() {
 			float x = key_hofs + name_limit + (time - keys_from) * zoom_scale;
 
 			Ref<Texture> tex = type_icon[tt];
+			Color modulate = Color(1, 1, 1);
+
+			bool is_hover = false;
+			bool is_selected = false;
 
 			SelectedKey sk;
 			sk.key = i;
@@ -1472,13 +1474,33 @@ void AnimationKeyEditor::_track_editor_draw() {
 
 				if (click.click == ClickOver::CLICK_MOVE_KEYS)
 					continue;
-				tex = type_selected;
+				is_selected = true;
 			}
 
 			if (mouse_over.over == MouseOver::OVER_KEY && mouse_over.track == idx && mouse_over.over_key == i)
-				tex = type_hover;
+				is_hover = true;
 
 			Variant value = animation->track_get_key_value(idx, i);
+
+			if (prop_exists && !Variant::can_convert(value.get_type(), valid_type)) {
+
+				tex = invalid_icon;
+				if (is_hover)
+					modulate = Color(1.5, 1.5, 1.5);
+				else
+					modulate = Color(1, 1, 1);
+			} else if (is_selected) {
+
+				tex = valid_icon;
+				modulate = modulate_selected;
+				if (is_hover)
+					modulate = modulate.lightened(0.2);
+			} else if (is_hover) {
+
+				tex = valid_icon;
+				modulate = Color(1, 1, 1);
+			}
+
 			if (first && i > 0 && value == animation->track_get_key_value(idx, i - 1)) {
 
 				te->draw_line(ofs + Vector2(name_limit, y + h / 2), ofs + Point2(x, y + h / 2), color);
@@ -1491,19 +1513,7 @@ void AnimationKeyEditor::_track_editor_draw() {
 				te->draw_line(ofs + Point2(x_n, y + h / 2), ofs + Point2(x, y + h / 2), color);
 			}
 
-			if (prop_exists && !Variant::can_convert(value.get_type(), valid_type)) {
-				te->draw_texture(invalid_icon, ofs + Point2(x, y + key_vofs).floor());
-			}
-
-			if (prop_exists && !Variant::can_convert(value.get_type(), valid_type)) {
-				if (tex == type_hover)
-					te->draw_texture(invalid_icon_hover, ofs + Point2(x, y + key_vofs).floor());
-				else
-					te->draw_texture(invalid_icon, ofs + Point2(x, y + key_vofs).floor());
-			} else {
-
-				te->draw_texture(tex, ofs + Point2(x, y + key_vofs).floor());
-			}
+			te->draw_texture(tex, ofs + Point2(x, y + key_vofs).floor(), modulate);
 
 			first = false;
 		}
@@ -1539,8 +1549,8 @@ void AnimationKeyEditor::_track_editor_draw() {
 					continue;
 				int y = h + i * h + sep;
 
-				float key_vofs = Math::floor((float)(h - type_selected->get_height()) / 2);
-				float key_hofs = -Math::floor((float)type_selected->get_height() / 2);
+				float key_vofs = Math::floor((float)(h - valid_icon->get_height()) / 2);
+				float key_hofs = -Math::floor((float)valid_icon->get_height() / 2);
 
 				float time = animation->track_get_key_time(idx, E->key().key);
 				float diff = time - from_t;
@@ -1554,7 +1564,7 @@ void AnimationKeyEditor::_track_editor_draw() {
 
 				x += name_limit;
 
-				te->draw_texture(type_selected, ofs + Point2(x + key_hofs, y + key_vofs).floor());
+				te->draw_texture(valid_icon, ofs + Point2(x + key_hofs, y + key_vofs).floor(), modulate_selected);
 			}
 		} break;
 		default: {};
@@ -1830,7 +1840,7 @@ void AnimationKeyEditor::_track_editor_gui_input(const Ref<InputEvent> &p_input)
 		get_icon("KeyXform", "EditorIcons"),
 		get_icon("KeyCall", "EditorIcons")
 	};
-	int right_separator_ofs = down_icon->get_width() * 3 + add_key_icon->get_width() + interp_icon[0]->get_width() + wrap_icon[0]->get_width() + cont_icon[0]->get_width() + hsep * 9;
+	int right_separator_ofs = right_data_size_cache;
 
 	int h = font->get_height() + sep;
 
@@ -3042,7 +3052,7 @@ void AnimationKeyEditor::_notification(int p_what) {
 					get_icon("InterpWrapClamp", "EditorIcons"),
 					get_icon("InterpWrapLoop", "EditorIcons"),
 				};
-				right_data_size_cache = down_icon->get_width() * 3 + add_key_icon->get_width() + interp_icon[0]->get_width() + cont_icon[0]->get_width() + wrap_icon[0]->get_width() + hsep * 8;
+				right_data_size_cache = down_icon->get_width() * 3 + add_key_icon->get_width() + interp_icon[0]->get_width() + cont_icon[0]->get_width() + wrap_icon[0]->get_width() + hsep * 9;
 			}
 		} break;
 	}
@@ -3362,7 +3372,7 @@ int AnimationKeyEditor::_confirm_insert(InsertData p_id, int p_last_track) {
 			//wants a new tack
 
 			{
-				//shitty hack
+				//hack
 				NodePath np;
 				animation->add_track(p_id.type);
 				animation->track_set_path(animation->get_track_count() - 1, p_id.path);
@@ -3998,6 +4008,7 @@ AnimationKeyEditor::AnimationKeyEditor() {
 	//key_edit->ke_dialog=key_edit_dialog;
 
 	type_menu = memnew(PopupMenu);
+	type_menu->set_pass_on_modal_close_click(false);
 	add_child(type_menu);
 	for (int i = 0; i < Variant::VARIANT_MAX; i++)
 		type_menu->add_item(Variant::get_type_name(Variant::Type(i)), i);
@@ -4038,6 +4049,7 @@ AnimationKeyEditor::AnimationKeyEditor() {
 	add_child(track_name);
 	track_name->connect("text_entered", this, "_track_name_changed");
 	track_menu = memnew(PopupMenu);
+	track_menu->set_pass_on_modal_close_click(false);
 	add_child(track_menu);
 	track_menu->connect("id_pressed", this, "_track_menu_selected");
 

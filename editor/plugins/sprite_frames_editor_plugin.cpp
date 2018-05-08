@@ -398,8 +398,6 @@ void SpriteFramesEditor::_animation_add() {
 	animations->grab_focus();
 }
 void SpriteFramesEditor::_animation_remove() {
-
-	//fuck everything
 	if (updating)
 		return;
 
@@ -459,8 +457,6 @@ void SpriteFramesEditor::_update_library(bool p_skip_selector) {
 		TreeItem *anim_root = animations->create_item();
 
 		List<StringName> anim_names;
-
-		anim_names.sort_custom<StringName::AlphCompare>();
 
 		frames->get_animation_list(&anim_names);
 

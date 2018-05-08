@@ -67,6 +67,9 @@ void SceneTreeDock::_unhandled_key_input(Ref<InputEvent> p_event) {
 	if (get_viewport()->get_modal_stack_top())
 		return; //ignore because of modal window
 
+	if (get_focus_owner() && get_focus_owner()->is_text_field())
+		return;
+
 	if (!p_event->is_pressed() || p_event->is_echo())
 		return;
 
@@ -1399,6 +1402,8 @@ void SceneTreeDock::_create() {
 			Node *newnode = Object::cast_to<Node>(c);
 			ERR_FAIL_COND(!newnode);
 
+			Node *default_oldnode = Object::cast_to<Node>(ClassDB::instance(n->get_class()));
+
 			List<PropertyInfo> pinfo;
 			n->get_property_list(&pinfo);
 
@@ -1407,10 +1412,13 @@ void SceneTreeDock::_create() {
 					continue;
 				if (E->get().name == "__meta__")
 					continue;
-				newnode->set(E->get().name, n->get(E->get().name));
+	                	if (default_oldnode->get(E->get().name) != n->get(E->get().name)) {
+                        		newnode->set(E->get().name, n->get(E->get().name));
+		                }
 			}
 
 			editor->push_item(NULL);
+			memdelete(default_oldnode);
 
 			//reconnect signals
 			List<MethodInfo> sl;
@@ -1749,6 +1757,7 @@ void SceneTreeDock::_tree_rmb(const Vector2 &p_menu_pos) {
 
 		subresources.clear();
 		menu_subresources->clear();
+		menu_subresources->set_size(Size2(1, 1));
 		_add_children_to_popup(selection.front()->get(), 0);
 		if (menu->get_item_count() > 0)
 			menu->add_separator();
@@ -1882,8 +1891,6 @@ void SceneTreeDock::_local_tree_selected() {
 		remote_tree->hide();
 	edit_remote->set_pressed(false);
 	edit_local->set_pressed(true);
-
-	_node_selected();
 }
 
 void SceneTreeDock::_bind_methods() {

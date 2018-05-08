@@ -628,7 +628,7 @@ void SpaceBullet::destroy_world() {
 
 void SpaceBullet::check_ghost_overlaps() {
 
-	/// Algorith support variables
+	/// Algorithm support variables
 	btConvexShape *other_body_shape;
 	btConvexShape *area_shape;
 	btGjkPairDetector::ClosestPointInput gjk_input;
@@ -660,7 +660,10 @@ void SpaceBullet::check_ghost_overlaps() {
 		// For each overlapping
 		for (i = ghostOverlaps.size() - 1; 0 <= i; --i) {
 
-			if (!(ghostOverlaps[i]->getUserIndex() == CollisionObjectBullet::TYPE_RIGID_BODY || ghostOverlaps[i]->getUserIndex() == CollisionObjectBullet::TYPE_AREA))
+			if (ghostOverlaps[i]->getUserIndex() == CollisionObjectBullet::TYPE_AREA) {
+				if (!static_cast<AreaBullet *>(ghostOverlaps[i]->getUserPointer())->is_monitorable())
+					continue;
+			} else if (ghostOverlaps[i]->getUserIndex() != CollisionObjectBullet::TYPE_RIGID_BODY)
 				continue;
 
 			otherObject = static_cast<RigidCollisionObjectBullet *>(ghostOverlaps[i]->getUserPointer());
@@ -979,6 +982,8 @@ bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_f
 			} else {
 				if (!l_has_penetration)
 					break;
+				else
+					has_penetration = true;
 			}
 		}
 	}
@@ -1016,7 +1021,7 @@ public:
 	}
 
 	void reset() {
-		result_collision_objects.empty();
+		result_collision_objects.clear();
 	}
 };
 

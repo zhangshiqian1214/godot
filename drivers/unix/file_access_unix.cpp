@@ -69,6 +69,7 @@ Error FileAccessUnix::_open(const String &p_path, int p_mode_flags) {
 		fclose(f);
 	f = NULL;
 
+	path_src = p_path;
 	path = fix_path(p_path);
 	//printf("opening %ls, %i\n", path.c_str(), Memory::get_static_mem_usage());
 
@@ -152,6 +153,16 @@ bool FileAccessUnix::is_open() const {
 	return (f != NULL);
 }
 
+String FileAccessUnix::get_path() const {
+
+	return path_src;
+}
+
+String FileAccessUnix::get_path_absolute() const {
+
+	return path;
+}
+
 void FileAccessUnix::seek(size_t p_position) {
 
 	ERR_FAIL_COND(!f);
@@ -173,7 +184,7 @@ size_t FileAccessUnix::get_position() const {
 
 	ERR_FAIL_COND_V(!f, 0);
 
-	int pos = ftell(f);
+	long pos = ftell(f);
 	if (pos < 0) {
 		check_errors();
 		ERR_FAIL_V(0);
@@ -185,10 +196,10 @@ size_t FileAccessUnix::get_len() const {
 
 	ERR_FAIL_COND_V(!f, 0);
 
-	int pos = ftell(f);
+	long pos = ftell(f);
 	ERR_FAIL_COND_V(pos < 0, 0);
 	ERR_FAIL_COND_V(fseek(f, 0, SEEK_END), 0);
-	int size = ftell(f);
+	long size = ftell(f);
 	ERR_FAIL_COND_V(size < 0, 0);
 	ERR_FAIL_COND_V(fseek(f, pos, SEEK_SET), 0);
 
@@ -234,6 +245,11 @@ void FileAccessUnix::store_8(uint8_t p_dest) {
 
 	ERR_FAIL_COND(!f);
 	ERR_FAIL_COND(fwrite(&p_dest, 1, 1, f) != 1);
+}
+
+void FileAccessUnix::store_buffer(const uint8_t *p_src, int p_length) {
+	ERR_FAIL_COND(!f);
+	ERR_FAIL_COND(fwrite(p_src, 1, p_length, f) != p_length);
 }
 
 bool FileAccessUnix::file_exists(const String &p_path) {

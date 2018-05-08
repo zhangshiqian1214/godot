@@ -60,7 +60,7 @@ Ref<Script> GDScriptLanguage::get_template(const String &p_class_name, const Str
 					   "# var a = 2\n" +
 					   "# var b = \"textvar\"\n\n" +
 					   "func _ready():\n" +
-					   "%TS%# Called every time the node is added to the scene.\n" +
+					   "%TS%# Called when the node is added to the scene for the first time.\n" +
 					   "%TS%# Initialization here\n" +
 					   "%TS%pass\n\n" +
 					   "#func _process(delta):\n" +
@@ -369,8 +369,8 @@ void GDScriptLanguage::get_public_functions(List<MethodInfo> *p_functions) const
 		mi.name = "yield";
 		mi.arguments.push_back(PropertyInfo(Variant::OBJECT, "object"));
 		mi.arguments.push_back(PropertyInfo(Variant::STRING, "signal"));
-		mi.default_arguments.push_back(Variant::NIL);
-		mi.default_arguments.push_back(Variant::STRING);
+		mi.default_arguments.push_back(Variant());
+		mi.default_arguments.push_back(String());
 		mi.return_val = PropertyInfo(Variant::OBJECT, "", PROPERTY_HINT_RESOURCE_TYPE, "GDScriptFunctionState");
 		p_functions->push_back(mi);
 	}
@@ -410,13 +410,11 @@ String GDScriptLanguage::make_function(const String &p_class, const String &p_na
 
 	String s = "func " + p_name + "(";
 	if (p_args.size()) {
-		s += " ";
 		for (int i = 0; i < p_args.size(); i++) {
 			if (i > 0)
 				s += ", ";
 			s += p_args[i].get_slice(":", 0);
 		}
-		s += " ";
 	}
 	s += "):\n" + _get_indentation() + "pass # replace with function body\n";
 
@@ -1335,13 +1333,23 @@ static void _find_identifiers_in_block(GDScriptCompletionContext &context, int p
 
 	for (int i = 0; i < context.block->statements.size(); i++) {
 
-		if (context.block->statements[i]->line > p_line)
+		GDScriptParser::Node *statement = context.block->statements[i];
+		if (statement->line > p_line)
 			continue;
 
-		if (context.block->statements[i]->type == GDScriptParser::BlockNode::TYPE_LOCAL_VAR) {
+		GDScriptParser::BlockNode::Type statementType = statement->type;
+		if (statementType == GDScriptParser::BlockNode::TYPE_LOCAL_VAR) {
 
-			const GDScriptParser::LocalVarNode *lv = static_cast<const GDScriptParser::LocalVarNode *>(context.block->statements[i]);
+			const GDScriptParser::LocalVarNode *lv = static_cast<const GDScriptParser::LocalVarNode *>(statement);
 			result.insert(lv->name.operator String());
+		} else if (statementType == GDScriptParser::BlockNode::TYPE_CONTROL_FLOW) {
+
+			const GDScriptParser::ControlFlowNode *cf = static_cast<const GDScriptParser::ControlFlowNode *>(statement);
+			if (cf->cf_type == GDScriptParser::ControlFlowNode::CF_FOR) {
+
+				const GDScriptParser::IdentifierNode *id = static_cast<const GDScriptParser::IdentifierNode *>(cf->arguments[0]);
+				result.insert(id->name.operator String());
+			}
 		}
 	}
 }

@@ -370,9 +370,7 @@ struct _RigidBodyInOut {
 
 void RigidBody::_direct_state_changed(Object *p_state) {
 
-//eh.. fuck
 #ifdef DEBUG_ENABLED
-
 	state = Object::cast_to<PhysicsDirectBodyState>(p_state);
 #else
 	state = (PhysicsDirectBodyState *)p_state; //trust it
@@ -779,7 +777,7 @@ String RigidBody::get_configuration_warning() const {
 
 	String warning = CollisionObject::get_configuration_warning();
 
-	if ((get_mode() == MODE_RIGID || get_mode() == MODE_CHARACTER) && (ABS(t.basis.get_axis(0).length() - 1.0) > 0.05 || ABS(t.basis.get_axis(1).length() - 1.0) > 0.05 || ABS(t.basis.get_axis(0).length() - 1.0) > 0.05)) {
+	if ((get_mode() == MODE_RIGID || get_mode() == MODE_CHARACTER) && (ABS(t.basis.get_axis(0).length() - 1.0) > 0.05 || ABS(t.basis.get_axis(1).length() - 1.0) > 0.05 || ABS(t.basis.get_axis(2).length() - 1.0) > 0.05)) {
 		if (warning != String()) {
 			warning += "\n";
 		}

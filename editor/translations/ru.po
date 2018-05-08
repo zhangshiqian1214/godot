@@ -5,7 +5,9 @@
 #
 # Artem Varaksa <aymfst@gmail.com>, 2018.
 # B10nicMachine <shumik1337@gmail.com>, 2017.
+# Chaosus89 <chaosus89@gmail.com>, 2018.
 # DimOkGamer <dimokgamer@gmail.com>, 2016-2017.
+# Forest Swamp <sample1989@mail.ru>, 2018.
 # Igor S <scorched@bk.ru>, 2017.
 # ijet <my-ijet@mail.ru>, 2017-2018.
 # Maxim Kim <habamax@gmail.com>, 2016.
@@ -13,13 +15,14 @@
 # outbools <drag4e@yandex.ru>, 2017.
 # pitchblack <pitchblack@mail.ru>, 2017.
 # Sergey Agarkov <zorgsoft@gmail.com>, 2017.
+# Аркадий Авас <savvot@gmail.com>, 2018.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: Godot Engine editor\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2018-01-24 12:27+0000\n"
-"Last-Translator: ijet <my-ijet@mail.ru>\n"
+"PO-Revision-Date: 2018-04-27 16:39+0000\n"
+"Last-Translator: Chaosus89 <chaosus89@gmail.com>\n"
 "Language-Team: Russian <https://hosted.weblate.org/projects/godot-engine/"
 "godot/ru/>\n"
 "Language: ru\n"
@@ -28,7 +31,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
 "%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
-"X-Generator: Weblate 2.19-dev\n"
+"X-Generator: Weblate 3.0-dev\n"
 
 #: editor/animation_editor.cpp
 msgid "Disabled"
@@ -1288,11 +1291,11 @@ msgstr "Краткое описание:"
 
 #: editor/editor_help.cpp
 msgid "Members"
-msgstr "Участники"
+msgstr "Свойства"
 
 #: editor/editor_help.cpp modules/visual_script/visual_script_editor.cpp
 msgid "Members:"
-msgstr "Участники:"
+msgstr "Свойства:"
 
 #: editor/editor_help.cpp
 msgid "Public Methods"
@@ -1358,7 +1361,7 @@ msgstr "Свойства"
 
 #: editor/editor_help.cpp
 msgid "Property Description:"
-msgstr "Описание свойства:"
+msgstr "Описание свойств:"
 
 #: editor/editor_help.cpp
 msgid ""
@@ -1406,6 +1409,10 @@ msgstr "Очистить"
 #: editor/editor_log.cpp
 msgid "Clear Output"
 msgstr "Очистить вывод"
+
+#: editor/editor_node.cpp
+msgid "Project export failed with error code %d."
+msgstr ""
 
 #: editor/editor_node.cpp editor/plugins/animation_player_editor_plugin.cpp
 msgid "Error saving resource!"
@@ -2011,7 +2018,7 @@ msgstr ""
 
 #: editor/editor_node.cpp
 msgid "Visible Navigation"
-msgstr "Видимые области навигации"
+msgstr "Видимая навигация"
 
 #: editor/editor_node.cpp
 msgid ""
@@ -2352,7 +2359,7 @@ msgstr "Включительно"
 
 #: editor/editor_profiler.cpp
 msgid "Self"
-msgstr "Сущность"
+msgstr "Self"
 
 #: editor/editor_profiler.cpp
 msgid "Frame #:"
@@ -2459,14 +2466,6 @@ msgid "Invalid version.txt format inside templates."
 msgstr "Неверный формат version.txt файла внутри шаблонов."
 
 #: editor/export_template_manager.cpp
-msgid ""
-"Invalid version.txt format inside templates. Revision is not a valid "
-"identifier."
-msgstr ""
-"Неверный формат version.txt файла внутри шаблонов. Идентификатор ревизии не "
-"верен."
-
-#: editor/export_template_manager.cpp
 msgid "No version.txt found inside templates."
 msgstr "Не найден version.txt файл в шаблонах."
 
@@ -2519,10 +2518,6 @@ msgstr "Циклическое перенаправление."
 #: editor/plugins/asset_library_editor_plugin.cpp
 msgid "Failed:"
 msgstr "Не удалось:"
-
-#: editor/export_template_manager.cpp
-msgid "Can't write file."
-msgstr "Не удалось записать файл."
 
 #: editor/export_template_manager.cpp
 msgid "Download Complete."
@@ -3711,16 +3706,26 @@ msgid "Show Grid"
 msgstr "Показать сетку"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
-msgid "Show helpers"
+msgid "Show Helpers"
 msgstr "Показывать помощники"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
-msgid "Show rulers"
+msgid "Show Rulers"
 msgstr "Показывать линейки"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
-msgid "Show guides"
+msgid "Show Guides"
 msgstr "Показывать направляющие"
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+#, fuzzy
+msgid "Show Origin"
+msgstr "Отображать начало координат"
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+#, fuzzy
+msgid "Show Viewport"
+msgstr "1 Окно"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
 msgid "Center Selection"
@@ -4010,6 +4015,10 @@ msgstr "В MeshInstance нет полисетки!"
 #: editor/plugins/mesh_instance_editor_plugin.cpp
 msgid "Mesh has not surface to create outlines from!"
 msgstr "Полиcетка не имеет поверхности для создания контура!"
+
+#: editor/plugins/mesh_instance_editor_plugin.cpp
+msgid "Mesh primitive type is not PRIMITIVE_TRIANGLES!"
+msgstr ""
 
 #: editor/plugins/mesh_instance_editor_plugin.cpp
 msgid "Could not create outline!"
@@ -4546,6 +4555,22 @@ msgid "Resource clipboard is empty!"
 msgstr "Нет ресурса в буфере обмена!"
 
 #: editor/plugins/resource_preloader_editor_plugin.cpp
+#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
+msgid "Open in Editor"
+msgstr "Открыть в редакторе"
+
+#: editor/plugins/resource_preloader_editor_plugin.cpp
+#: editor/scene_tree_editor.cpp
+msgid "Instance:"
+msgstr "Экземпляр:"
+
+#: editor/plugins/resource_preloader_editor_plugin.cpp
+#: editor/plugins/theme_editor_plugin.cpp editor/project_settings_editor.cpp
+#: editor/scene_tree_editor.cpp editor/script_editor_debugger.cpp
+msgid "Type:"
+msgstr "Тип:"
+
+#: editor/plugins/resource_preloader_editor_plugin.cpp
 #: editor/plugins/sprite_frames_editor_plugin.cpp
 msgid "Load Resource"
 msgstr "Загрузить ресурс"
@@ -4635,7 +4660,7 @@ msgstr "Сохранить всё"
 
 #: editor/plugins/script_editor_plugin.cpp
 msgid "Soft Reload Script"
-msgstr "Мягко перезагрузить скрипты"
+msgstr "Мягко перезагрузить скрипт"
 
 #: editor/plugins/script_editor_plugin.cpp
 msgid "Copy Script Path"
@@ -4832,10 +4857,6 @@ msgid "Toggle Comment"
 msgstr "Переключить комментарий"
 
 #: editor/plugins/script_text_editor.cpp
-msgid "Clone Down"
-msgstr "Копировать вниз"
-
-#: editor/plugins/script_text_editor.cpp
 msgid "Fold/Unfold Line"
 msgstr "Свернуть/Развернуть строку"
 
@@ -4846,6 +4867,10 @@ msgstr "Свернуть все строки"
 #: editor/plugins/script_text_editor.cpp
 msgid "Unfold All Lines"
 msgstr "Развернуть все строки"
+
+#: editor/plugins/script_text_editor.cpp
+msgid "Clone Down"
+msgstr "Копировать вниз"
 
 #: editor/plugins/script_text_editor.cpp
 msgid "Complete Symbol"
@@ -5532,18 +5557,16 @@ msgid "Move (After)"
 msgstr "Переместить (после)"
 
 #: editor/plugins/sprite_frames_editor_plugin.cpp
-#, fuzzy
 msgid "SpriteFrames"
-msgstr "Кадры cпрайта"
+msgstr "SpriteFrames"
 
 #: editor/plugins/style_box_editor_plugin.cpp
 msgid "StyleBox Preview:"
-msgstr "StyleBox предпросмотр:"
+msgstr "Предпросмотр StyleBox:"
 
 #: editor/plugins/style_box_editor_plugin.cpp
-#, fuzzy
 msgid "StyleBox"
-msgstr "Стиль"
+msgstr "StyleBox"
 
 #: editor/plugins/texture_region_editor_plugin.cpp
 msgid "Set Region Rect"
@@ -5666,6 +5689,16 @@ msgid "Checked Item"
 msgstr "Отмеченный элемент"
 
 #: editor/plugins/theme_editor_plugin.cpp
+#, fuzzy
+msgid "Radio Item"
+msgstr "Добавить элемент"
+
+#: editor/plugins/theme_editor_plugin.cpp
+#, fuzzy
+msgid "Checked Radio Item"
+msgstr "Отмеченный элемент"
+
+#: editor/plugins/theme_editor_plugin.cpp
 msgid "Has"
 msgstr "Имеет"
 
@@ -5692,11 +5725,6 @@ msgstr "Вкладка 2"
 #: editor/plugins/theme_editor_plugin.cpp
 msgid "Tab 3"
 msgstr "Вкладка 3"
-
-#: editor/plugins/theme_editor_plugin.cpp editor/project_settings_editor.cpp
-#: editor/scene_tree_editor.cpp editor/script_editor_debugger.cpp
-msgid "Type:"
-msgstr "Тип:"
 
 #: editor/plugins/theme_editor_plugin.cpp
 msgid "Data Type:"
@@ -5924,7 +5952,7 @@ msgstr "Создать латку"
 
 #: editor/project_export.cpp
 msgid "Features"
-msgstr "Свойства"
+msgstr "Особенности"
 
 #: editor/project_export.cpp
 msgid "Custom (comma-separated):"
@@ -5963,10 +5991,6 @@ msgid "Please choose an empty folder."
 msgstr "Пожалуйста, выберите пустую папку."
 
 #: editor/project_manager.cpp
-msgid "Please choose a folder that does not contain a 'project.godot' file."
-msgstr "Пожалуйста, выберите папку, которая не содержит файл 'project.godot'."
-
-#: editor/project_manager.cpp
 msgid "Imported Project"
 msgstr "Импортированный проект"
 
@@ -5987,8 +6011,12 @@ msgid "Invalid project path (changed anything?)."
 msgstr "Неверный путь к проекту (Что-то изменили?)."
 
 #: editor/project_manager.cpp
-msgid "Couldn't get project.godot in project path."
-msgstr "Отсутствует project.godot в папке проекта."
+msgid ""
+"Couldn't load project.godot in project path (error %d). It may be missing or "
+"corrupted."
+msgstr ""
+"Не удалось загрузить project.godot в пути проекта (ошибка %d). Возможно, он "
+"отсутствует или поврежден."
 
 #: editor/project_manager.cpp
 msgid "Couldn't edit project.godot in project path."
@@ -6005,10 +6033,6 @@ msgstr "Следующие файлы не удалось извлечь из п
 #: editor/project_manager.cpp
 msgid "Rename Project"
 msgstr "Переименовать проект"
-
-#: editor/project_manager.cpp
-msgid "Couldn't get project.godot in the project path."
-msgstr "Отсутствует project.godot в папке проекта."
 
 #: editor/project_manager.cpp
 msgid "New Game Project"
@@ -6154,7 +6178,7 @@ msgstr ""
 
 #: editor/project_settings_editor.cpp
 msgid "Key "
-msgstr "Кнопка "
+msgstr "Ключ "
 
 #: editor/project_settings_editor.cpp
 msgid "Joy Button"
@@ -6169,8 +6193,10 @@ msgid "Mouse Button"
 msgstr "Кнопка мыши"
 
 #: editor/project_settings_editor.cpp
-msgid "Invalid action (anything goes but '/' or ':')."
-msgstr "Недопустимое название действия (подойдёт всё кроме '/' или ':')."
+msgid ""
+"Invalid action name. it cannot be empty nor contain '/', ':', '=', '\\' or "
+"'\"'"
+msgstr ""
 
 #: editor/project_settings_editor.cpp
 msgid "Action '%s' already exists!"
@@ -6311,10 +6337,6 @@ msgstr "Параметр '%s' является внутренним, и не м�
 #: editor/project_settings_editor.cpp
 msgid "Delete Item"
 msgstr "Удалить элемент"
-
-#: editor/project_settings_editor.cpp
-msgid "Can't contain '/' or ':'"
-msgstr "Не может содержать '/' или ':'"
 
 #: editor/project_settings_editor.cpp
 msgid "Already existing"
@@ -6715,10 +6737,6 @@ msgstr "Вложенные ресурсы"
 msgid "Clear Inheritance"
 msgstr "Очистить наследование"
 
-#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
-msgid "Open in Editor"
-msgstr "Открыть в редакторе"
-
 #: editor/scene_tree_dock.cpp
 msgid "Delete Node(s)"
 msgstr "Удалить узел(узлы)"
@@ -6834,10 +6852,6 @@ msgid ""
 msgstr ""
 "Узел принадлежит к группе.\n"
 "Нажмите, чтобы показать панель групп."
-
-#: editor/scene_tree_editor.cpp
-msgid "Instance:"
-msgstr "Экземпляр:"
 
 #: editor/scene_tree_editor.cpp
 msgid "Open script"
@@ -6981,7 +6995,7 @@ msgstr "Встроенный Скрипт"
 
 #: editor/script_create_dialog.cpp
 msgid "Attach Node Script"
-msgstr "Добавление скрипта"
+msgstr "Прикрепить скрипт"
 
 #: editor/script_editor_debugger.cpp
 msgid "Remote "
@@ -7268,6 +7282,30 @@ msgid "Object can't provide a length."
 msgstr "Объект не может предоставить длину."
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Next Plane"
+msgstr "Следующая поскость"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Previous Plane"
+msgstr "Предыдущая плоскость"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Plane:"
+msgstr "Плоскость:"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Next Floor"
+msgstr "Следующий этаж"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Previous Floor"
+msgstr "Предыдущий этаж"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Floor:"
+msgstr "Этаж:"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
 msgid "GridMap Delete Selection"
 msgstr "Удалить выделенную сетку"
 
@@ -7276,24 +7314,12 @@ msgid "GridMap Duplicate Selection"
 msgstr "Дублировать выделенную сетку"
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
-msgid "Floor:"
-msgstr "Этаж:"
-
-#: modules/gridmap/grid_map_editor_plugin.cpp
 msgid "Grid Map"
 msgstr "Сеточная карта"
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
 msgid "Snap View"
 msgstr "Привязать вид"
-
-#: modules/gridmap/grid_map_editor_plugin.cpp
-msgid "Previous Floor"
-msgstr "Предыдущий этаж"
-
-#: modules/gridmap/grid_map_editor_plugin.cpp
-msgid "Next Floor"
-msgstr "Следующий этаж"
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
 msgid "Clip Disabled"
@@ -7371,6 +7397,10 @@ msgstr "GridMap Параметры"
 msgid "Pick Distance:"
 msgstr "Расстояние выбора:"
 
+#: modules/mono/csharp_script.cpp
+msgid "Class name can't be a reserved keyword"
+msgstr ""
+
 #: modules/mono/editor/godotsharp_editor.cpp
 msgid "Generating solution..."
 msgstr "Генерация решения..."
@@ -7400,6 +7430,10 @@ msgid "Mono"
 msgstr "Моно"
 
 #: modules/mono/editor/godotsharp_editor.cpp
+msgid "About C# support"
+msgstr "О C# поддержке"
+
+#: modules/mono/editor/godotsharp_editor.cpp
 msgid "Create C# solution"
 msgstr "Создать C# решение"
 
@@ -7414,6 +7448,10 @@ msgstr "Собрать проект"
 #: modules/mono/editor/mono_bottom_panel.cpp
 msgid "Warnings"
 msgstr "Предупреждения"
+
+#: modules/mono/mono_gd/gd_mono_utils.cpp
+msgid "End of inner exception stack trace"
+msgstr "Конец трассировки внутреннего стека исключений"
 
 #: modules/visual_script/visual_script.cpp
 msgid ""
@@ -7818,6 +7856,10 @@ msgid ""
 "Consider adding CollisionShape2D or CollisionPolygon2D children nodes to "
 "define its shape."
 msgstr ""
+"Этот узел не имеет дочерних форм, поэтому он не может взаимодействовать с "
+"пространством.\n"
+"Рассмотрите возможность добавления CollisionShape2D или CollisionPolygon2D "
+"дочерних узлов, для определения его формы."
 
 #: scene/2d/collision_polygon_2d.cpp
 msgid ""
@@ -7965,6 +8007,14 @@ msgid "ARVROrigin requires an ARVRCamera child node"
 msgstr "ARVROrigin требует дочерний узел ARVRCamera"
 
 #: scene/3d/baked_lightmap.cpp
+msgid "%d%%"
+msgstr "%d%%"
+
+#: scene/3d/baked_lightmap.cpp
+msgid "(Time Left: %d:%02d s)"
+msgstr "(Осталось: %d:%02d сек)"
+
+#: scene/3d/baked_lightmap.cpp
 msgid "Plotting Meshes: "
 msgstr "Построение полисетки: "
 
@@ -7986,6 +8036,10 @@ msgid ""
 "Consider adding CollisionShape or CollisionPolygon children nodes to define "
 "its shape."
 msgstr ""
+"Этот узел не имеет дочерних форм, поэтому он не может взаимодействовать с "
+"пространством.\n"
+"Рассмотрите возможность добавления CollisionShape или CollisionPolygon "
+"дочерних узлов, чтобы определить его форму."
 
 #: scene/3d/collision_polygon.cpp
 msgid ""
@@ -8056,11 +8110,21 @@ msgid "Path property must point to a valid Spatial node to work."
 msgstr "Свойство Path должно указывать на действительный Spatial узел."
 
 #: scene/3d/scenario_fx.cpp
+msgid "WorldEnvironment needs an Environment resource."
+msgstr ""
+
+#: scene/3d/scenario_fx.cpp
 msgid ""
 "Only one WorldEnvironment is allowed per scene (or set of instanced scenes)."
 msgstr ""
 "Только один WorldEnvironment допускается на сцену или совокупность "
 "приведённых сцен."
+
+#: scene/3d/scenario_fx.cpp
+msgid ""
+"This WorldEnvironment is ignored. Either add a Camera (for 3D scenes) or set "
+"this environment's Background Mode to Canvas (for 2D scenes)."
+msgstr ""
 
 #: scene/3d/sprite_3d.cpp
 msgid ""
@@ -8160,6 +8224,32 @@ msgstr "Ошибка загрузки шрифта."
 #: scene/resources/dynamic_font.cpp
 msgid "Invalid font size."
 msgstr "Недопустимый размер шрифта."
+
+#~ msgid "Invalid action (anything goes but '/' or ':')."
+#~ msgstr "Недопустимое название действия (подойдёт всё кроме '/' или ':')."
+
+#~ msgid "Can't contain '/' or ':'"
+#~ msgstr "Не может содержать '/' или ':'"
+
+#~ msgid ""
+#~ "Invalid version.txt format inside templates. Revision is not a valid "
+#~ "identifier."
+#~ msgstr ""
+#~ "Неверный формат version.txt файла внутри шаблонов. Идентификатор ревизии "
+#~ "не верен."
+
+#~ msgid "Can't write file."
+#~ msgstr "Не удалось записать файл."
+
+#~ msgid "Please choose a folder that does not contain a 'project.godot' file."
+#~ msgstr ""
+#~ "Пожалуйста, выберите папку, которая не содержит файл 'project.godot'."
+
+#~ msgid "Couldn't get project.godot in project path."
+#~ msgstr "Отсутствует project.godot в папке проекта."
+
+#~ msgid "Couldn't get project.godot in the project path."
+#~ msgstr "Отсутствует project.godot в папке проекта."
 
 #~ msgid "Next"
 #~ msgstr "Следующий"

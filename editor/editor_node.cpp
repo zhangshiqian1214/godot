@@ -188,6 +188,8 @@ void EditorNode::_unhandled_input(const Ref<InputEvent> &p_event) {
 	Ref<InputEventKey> k = p_event;
 	if (k.is_valid() && k->is_pressed() && !k->is_echo() && !gui_base->get_viewport()->gui_has_modal_stack()) {
 
+		EditorPlugin *old_editor = editor_plugin_screen;
+
 		if (ED_IS_SHORTCUT("editor/next_tab", p_event)) {
 			int next_tab = editor_data.get_edited_scene() + 1;
 			next_tab %= editor_data.get_edited_scene_count();
@@ -216,6 +218,10 @@ void EditorNode::_unhandled_input(const Ref<InputEvent> &p_event) {
 			_editor_select_next();
 		} else if (ED_IS_SHORTCUT("editor/editor_prev", p_event)) {
 			_editor_select_prev();
+		}
+
+		if (old_editor != editor_plugin_screen) {
+			get_tree()->set_input_as_handled();
 		}
 	}
 }
@@ -441,24 +447,28 @@ void EditorNode::_fs_changed() {
 		}
 		if (preset.is_null()) {
 			String err = "Unknown export preset: " + export_defer.preset;
-			ERR_PRINT(err.utf8().get_data());
+			ERR_PRINTS(err);
 		} else {
 			Ref<EditorExportPlatform> platform = preset->get_platform();
 			if (platform.is_null()) {
 				String err = "Preset \"" + export_defer.preset + "\" doesn't have a platform.";
-				ERR_PRINT(err.utf8().get_data());
+				ERR_PRINTS(err);
 			} else {
 				// ensures export_project does not loop infinitely, because notifications may
 				// come during the export
 				export_defer.preset = "";
+				Error err;
 				if (!preset->is_runnable() && (export_defer.path.ends_with(".pck") || export_defer.path.ends_with(".zip"))) {
 					if (export_defer.path.ends_with(".zip")) {
-						platform->save_zip(preset, export_defer.path);
+						err = platform->export_zip(preset, export_defer.debug, export_defer.path);
 					} else if (export_defer.path.ends_with(".pck")) {
-						platform->save_pack(preset, export_defer.path);
+						err = platform->export_pack(preset, export_defer.debug, export_defer.path);
 					}
 				} else {
-					platform->export_project(preset, export_defer.debug, export_defer.path, /*p_flags*/ 0);
+					err = platform->export_project(preset, export_defer.debug, export_defer.path);
+				}
+				if (err != OK) {
+					ERR_PRINTS(vformat(TTR("Project export failed with error code %d."), (int)err));
 				}
 			}
 		}
@@ -581,6 +591,7 @@ void EditorNode::open_resource(const String &p_type) {
 void EditorNode::save_resource_in_path(const Ref<Resource> &p_resource, const String &p_path) {
 
 	editor_data.apply_changes_in_editors();
+
 	int flg = 0;
 	if (EditorSettings::get_singleton()->get("filesystem/on_save/compress_binary_resources"))
 		flg |= ResourceSaver::FLAG_COMPRESS;
@@ -589,6 +600,7 @@ void EditorNode::save_resource_in_path(const Ref<Resource> &p_resource, const St
 	Error err = ResourceSaver::save(path, p_resource, flg | ResourceSaver::FLAG_REPLACE_SUBRESOURCE_PATHS);
 
 	if (err != OK) {
+		current_option = -1;
 		accept->set_text(TTR("Error saving resource!"));
 		accept->popup_centered_minsize();
 		return;
@@ -975,6 +987,7 @@ void EditorNode::_save_scene_with_preview(String p_file, int p_idx) {
 
 		String file = cache_base + ".png";
 
+		post_process_preview(img);
 		img->save_png(file);
 	}
 
@@ -1064,7 +1077,8 @@ void EditorNode::_save_scene(String p_file, int idx) {
 
 void EditorNode::_save_all_scenes() {
 
-	for (int i = 0; i < editor_data.get_edited_scene_count(); i++) {
+	int i = _next_unsaved_scene(true, 0);
+	while (i != -1) {
 		Node *scene = editor_data.get_edited_scene_root(i);
 		if (scene && scene->get_filename() != "") {
 			if (i != editor_data.get_edited_scene())
@@ -1072,6 +1086,7 @@ void EditorNode::_save_all_scenes() {
 			else
 				_save_scene_with_preview(scene->get_filename());
 		} // else: ignore new scenes
+		i = _next_unsaved_scene(true, ++i);
 	}
 
 	_save_default_environment();
@@ -1185,6 +1200,7 @@ void EditorNode::_dialog_action(String p_file) {
 			Error err = ResourceSaver::save(p_file, ml);
 			if (err) {
 
+				current_option = -1;
 				accept->get_ok()->set_text(TTR("I see.."));
 				accept->set_text(TTR("Error saving MeshLibrary!"));
 				accept->popup_centered_minsize();
@@ -1195,7 +1211,7 @@ void EditorNode::_dialog_action(String p_file) {
 		case FILE_EXPORT_TILESET: {
 
 			Ref<TileSet> ml;
-			if (FileAccess::exists(p_file)) {
+			if (FileAccess::exists(p_file) && file_export_lib_merge->is_pressed()) {
 				ml = ResourceLoader::load(p_file, "TileSet");
 
 				if (ml.is_null()) {
@@ -1219,6 +1235,7 @@ void EditorNode::_dialog_action(String p_file) {
 			Error err = ResourceSaver::save(p_file, ml);
 			if (err) {
 
+				current_option = -1;
 				accept->get_ok()->set_text(TTR("I see.."));
 				accept->set_text(TTR("Error saving TileSet!"));
 				accept->popup_centered_minsize();
@@ -1419,7 +1436,8 @@ void EditorNode::_save_default_environment() {
 	if (fallback.is_valid() && fallback->get_path().is_resource_file()) {
 		Map<RES, bool> processed;
 		_find_and_save_edited_subresources(fallback.ptr(), processed, 0);
-		save_resource_in_path(fallback, fallback->get_path());
+		if (fallback->get_last_modified_time() != fallback->get_import_last_modified_time())
+			save_resource_in_path(fallback, fallback->get_path());
 	}
 }
 
@@ -1565,7 +1583,8 @@ void EditorNode::_edit_current() {
 
 		// special case if use of external editor is true
 		if (main_plugin->get_name() == "Script" && (bool(EditorSettings::get_singleton()->get("text_editor/external/use_external_editor")) || overrides_external_editor(current_obj))) {
-			main_plugin->edit(current_obj);
+			if (!changing_scene)
+				main_plugin->edit(current_obj);
 		}
 
 		else if (main_plugin != editor_plugin_screen && (!ScriptEditor::get_singleton() || !ScriptEditor::get_singleton()->is_visible_in_tree() || ScriptEditor::get_singleton()->can_take_away_focus())) {
@@ -1777,7 +1796,7 @@ void EditorNode::_run(bool p_current, const String &p_custom) {
 		editor_data.save_editor_external_data();
 	}
 
-	if (!_call_build())
+	if (!call_build())
 		return;
 
 	if (bool(EDITOR_DEF("run/output/always_clear_output_on_play", true))) {
@@ -2320,7 +2339,7 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 			if (run_native->is_deploy_debug_remote_enabled()) {
 				_menu_option_confirm(RUN_STOP, true);
 
-				if (!_call_build())
+				if (!call_build())
 					break; // build failed
 
 				emit_signal("play_pressed");
@@ -2906,7 +2925,7 @@ void EditorNode::_set_main_scene_state(Dictionary p_state, Node *p_for_scene) {
 
 	if (p_state.has("editor_index")) {
 		int index = p_state["editor_index"];
-		if (current < 2) { //if currently in spatial/2d, only switch to spatial/2d. if curently in script, stay there
+		if (current < 2) { //if currently in spatial/2d, only switch to spatial/2d. if currently in script, stay there
 			if (index < 2 || !get_edited_scene()) {
 				_editor_select(index);
 			}
@@ -4525,7 +4544,7 @@ void EditorNode::add_build_callback(EditorBuildCallback p_callback) {
 
 EditorBuildCallback EditorNode::build_callbacks[EditorNode::MAX_BUILD_CALLBACKS];
 
-bool EditorNode::_call_build() {
+bool EditorNode::call_build() {
 
 	for (int i = 0; i < build_callback_count; i++) {
 		if (!build_callbacks[i]())
@@ -5558,7 +5577,8 @@ EditorNode::EditorNode() {
 	bottom_panel_vb->add_child(bottom_panel_hb);
 
 	log = memnew(EditorLog);
-	add_bottom_panel_item(TTR("Output"), log);
+	ToolButton *output_button = add_bottom_panel_item(TTR("Output"), log);
+	log->set_tool_button(output_button);
 
 	old_split_ofs = 0;
 

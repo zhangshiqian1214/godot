@@ -318,6 +318,9 @@ void SpatialEditorViewport::_select(Spatial *p_node, bool p_append, bool p_singl
 		editor_selection->clear();
 		editor_selection->add_node(p_node);
 
+		if (Engine::get_singleton()->is_editor_hint())
+			editor->call("edit_node", p_node);
+
 	} else {
 
 		if (editor_selection->is_selected(p_node) && p_single) {
@@ -3340,14 +3343,14 @@ SpatialEditorViewport::SpatialEditorViewport(SpatialEditor *p_spatial_editor, Ed
 	view_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("spatial_editor/front_view"), VIEW_FRONT);
 	view_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("spatial_editor/rear_view"), VIEW_REAR);
 	view_menu->get_popup()->add_separator();
-	view_menu->get_popup()->add_check_item(TTR("Perspective") + " (" + ED_GET_SHORTCUT("spatial_editor/switch_perspective_orthogonal")->get_as_text() + ")", VIEW_PERSPECTIVE);
-	view_menu->get_popup()->add_check_item(TTR("Orthogonal") + " (" + ED_GET_SHORTCUT("spatial_editor/switch_perspective_orthogonal")->get_as_text() + ")", VIEW_ORTHOGONAL);
+	view_menu->get_popup()->add_radio_check_item(TTR("Perspective") + " (" + ED_GET_SHORTCUT("spatial_editor/switch_perspective_orthogonal")->get_as_text() + ")", VIEW_PERSPECTIVE);
+	view_menu->get_popup()->add_radio_check_item(TTR("Orthogonal") + " (" + ED_GET_SHORTCUT("spatial_editor/switch_perspective_orthogonal")->get_as_text() + ")", VIEW_ORTHOGONAL);
 	view_menu->get_popup()->set_item_checked(view_menu->get_popup()->get_item_index(VIEW_PERSPECTIVE), true);
 	view_menu->get_popup()->add_separator();
-	view_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_display_normal", TTR("Display Normal")), VIEW_DISPLAY_NORMAL);
-	view_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_display_wireframe", TTR("Display Wireframe")), VIEW_DISPLAY_WIREFRAME);
-	view_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_display_overdraw", TTR("Display Overdraw")), VIEW_DISPLAY_OVERDRAW);
-	view_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_display_unshaded", TTR("Display Unshaded")), VIEW_DISPLAY_SHADELESS);
+	view_menu->get_popup()->add_radio_check_shortcut(ED_SHORTCUT("spatial_editor/view_display_normal", TTR("Display Normal")), VIEW_DISPLAY_NORMAL);
+	view_menu->get_popup()->add_radio_check_shortcut(ED_SHORTCUT("spatial_editor/view_display_wireframe", TTR("Display Wireframe")), VIEW_DISPLAY_WIREFRAME);
+	view_menu->get_popup()->add_radio_check_shortcut(ED_SHORTCUT("spatial_editor/view_display_overdraw", TTR("Display Overdraw")), VIEW_DISPLAY_OVERDRAW);
+	view_menu->get_popup()->add_radio_check_shortcut(ED_SHORTCUT("spatial_editor/view_display_unshaded", TTR("Display Unshaded")), VIEW_DISPLAY_SHADELESS);
 	view_menu->get_popup()->set_item_checked(view_menu->get_popup()->get_item_index(VIEW_DISPLAY_NORMAL), true);
 	view_menu->get_popup()->add_separator();
 	view_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_environment", TTR("View Environment")), VIEW_ENVIRONMENT);
@@ -3826,9 +3829,6 @@ Object *SpatialEditor::_get_editor_data(Object *p_what) {
 	si->sp = sp;
 	si->sbox_instance = VisualServer::get_singleton()->instance_create2(selection_box->get_rid(), sp->get_world()->get_scenario());
 	VS::get_singleton()->instance_geometry_set_cast_shadows_setting(si->sbox_instance, VS::SHADOW_CASTING_SETTING_OFF);
-
-	if (Engine::get_singleton()->is_editor_hint())
-		editor->call("edit_node", sp);
 
 	return si;
 }
@@ -4674,6 +4674,8 @@ void SpatialEditor::_unhandled_key_input(Ref<InputEvent> p_event) {
 	if (!is_visible_in_tree() || get_viewport()->gui_has_modal_stack())
 		return;
 
+	snap_key_enabled = Input::get_singleton()->is_key_pressed(KEY_CONTROL);
+
 	Ref<InputEventKey> k = p_event;
 
 	if (k.is_valid()) {
@@ -4776,6 +4778,11 @@ void SpatialEditor::_notification(int p_what) {
 void SpatialEditor::add_control_to_menu_panel(Control *p_control) {
 
 	hbc_menu->add_child(p_control);
+}
+
+void SpatialEditor::remove_control_from_menu_panel(Control *p_control) {
+
+	hbc_menu->remove_child(p_control);
 }
 
 void SpatialEditor::set_can_preview(Camera *p_preview) {
@@ -4936,6 +4943,7 @@ SpatialEditor::SpatialEditor(EditorNode *p_editor) {
 	editor_selection->add_editor_plugin(this);
 
 	snap_enabled = false;
+	snap_key_enabled = false;
 	tool_mode = TOOL_MODE_SELECT;
 
 	hbc_menu = memnew(HBoxContainer);
@@ -5072,12 +5080,12 @@ SpatialEditor::SpatialEditor(EditorNode *p_editor) {
 	accept = memnew(AcceptDialog);
 	editor->get_gui_base()->add_child(accept);
 
-	p->add_check_shortcut(ED_SHORTCUT("spatial_editor/1_viewport", TTR("1 Viewport"), KEY_MASK_CMD + KEY_1), MENU_VIEW_USE_1_VIEWPORT);
-	p->add_check_shortcut(ED_SHORTCUT("spatial_editor/2_viewports", TTR("2 Viewports"), KEY_MASK_CMD + KEY_2), MENU_VIEW_USE_2_VIEWPORTS);
-	p->add_check_shortcut(ED_SHORTCUT("spatial_editor/2_viewports_alt", TTR("2 Viewports (Alt)"), KEY_MASK_ALT + KEY_MASK_CMD + KEY_2), MENU_VIEW_USE_2_VIEWPORTS_ALT);
-	p->add_check_shortcut(ED_SHORTCUT("spatial_editor/3_viewports", TTR("3 Viewports"), KEY_MASK_CMD + KEY_3), MENU_VIEW_USE_3_VIEWPORTS);
-	p->add_check_shortcut(ED_SHORTCUT("spatial_editor/3_viewports_alt", TTR("3 Viewports (Alt)"), KEY_MASK_ALT + KEY_MASK_CMD + KEY_3), MENU_VIEW_USE_3_VIEWPORTS_ALT);
-	p->add_check_shortcut(ED_SHORTCUT("spatial_editor/4_viewports", TTR("4 Viewports"), KEY_MASK_CMD + KEY_4), MENU_VIEW_USE_4_VIEWPORTS);
+	p->add_radio_check_shortcut(ED_SHORTCUT("spatial_editor/1_viewport", TTR("1 Viewport"), KEY_MASK_CMD + KEY_1), MENU_VIEW_USE_1_VIEWPORT);
+	p->add_radio_check_shortcut(ED_SHORTCUT("spatial_editor/2_viewports", TTR("2 Viewports"), KEY_MASK_CMD + KEY_2), MENU_VIEW_USE_2_VIEWPORTS);
+	p->add_radio_check_shortcut(ED_SHORTCUT("spatial_editor/2_viewports_alt", TTR("2 Viewports (Alt)"), KEY_MASK_ALT + KEY_MASK_CMD + KEY_2), MENU_VIEW_USE_2_VIEWPORTS_ALT);
+	p->add_radio_check_shortcut(ED_SHORTCUT("spatial_editor/3_viewports", TTR("3 Viewports"), KEY_MASK_CMD + KEY_3), MENU_VIEW_USE_3_VIEWPORTS);
+	p->add_radio_check_shortcut(ED_SHORTCUT("spatial_editor/3_viewports_alt", TTR("3 Viewports (Alt)"), KEY_MASK_ALT + KEY_MASK_CMD + KEY_3), MENU_VIEW_USE_3_VIEWPORTS_ALT);
+	p->add_radio_check_shortcut(ED_SHORTCUT("spatial_editor/4_viewports", TTR("4 Viewports"), KEY_MASK_CMD + KEY_4), MENU_VIEW_USE_4_VIEWPORTS);
 	p->add_separator();
 
 	p->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_origin", TTR("View Origin")), MENU_VIEW_ORIGIN);

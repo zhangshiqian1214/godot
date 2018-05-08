@@ -26,9 +26,14 @@ Files extracted from upstream source:
 
 ## certs
 
-- Upstream: Mozilla, via https://packages.ubuntu.com/xenial-updates/ca-certificates
-- Version: 2016-ish
+- Upstream: Mozilla, via https://apps.fedoraproject.org/packages/ca-certificates
+- Version: 2018.2.22
 - License: MPL 2.0
+
+File extracted from a recent Fedora install:
+/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+(It can't be extracted directly from the package,
+as it's generated on the user's system.)
 
 
 ## enet
@@ -78,7 +83,7 @@ Use UI font variant if available, because it has tight vertical metrics and good
 ### Hack Regular
 
 - Upstream: https://github.com/source-foundry/Hack
-- Version: 3.000
+- Version: 3.003
 - License: MIT + Bitstream Vera License
 
 ### DroidSans*.ttf
@@ -215,7 +220,6 @@ Files extracted from upstream source:
 Important: The files `utils/bit_reader_utils.{c,h}` have Godot-made
 changes to ensure they build for Javascript/HTML5. Those
 changes are marked with `// -- GODOT --` comments.
-
 
 ## minizip
 

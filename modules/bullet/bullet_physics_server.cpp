@@ -89,7 +89,9 @@ BulletPhysicsServer::BulletPhysicsServer() :
 		active(true),
 		active_spaces_count(0) {}
 
-BulletPhysicsServer::~BulletPhysicsServer() {}
+BulletPhysicsServer::~BulletPhysicsServer() {
+	bulletdelete(emptyShape);
+}
 
 RID BulletPhysicsServer::shape_create(ShapeType p_shape) {
 	ShapeBullet *shape = NULL;
@@ -783,7 +785,7 @@ int BulletPhysicsServer::body_get_max_contacts_reported(RID p_body) const {
 	return body->get_max_collisions_detection();
 }
 
-void BulletPhysicsServer::body_set_contacts_reported_depth_threshold(RID p_body, float p_treshold) {
+void BulletPhysicsServer::body_set_contacts_reported_depth_threshold(RID p_body, float p_threshold) {
 	WARN_PRINT("Not supported by bullet and even Godot");
 }
 

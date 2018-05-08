@@ -149,9 +149,43 @@ static Vector2 get_mouse_pos(NSEvent *event) {
 @end
 
 @interface GodotApplicationDelegate : NSObject
+- (void)forceUnbundledWindowActivationHackStep1;
+- (void)forceUnbundledWindowActivationHackStep2;
+- (void)forceUnbundledWindowActivationHackStep3;
 @end
 
 @implementation GodotApplicationDelegate
+
+- (void)forceUnbundledWindowActivationHackStep1 {
+	// Step1: Switch focus to macOS Dock.
+	// Required to perform step 2, TransformProcessType will fail if app is already the in focus.
+	for (NSRunningApplication *app in [NSRunningApplication runningApplicationsWithBundleIdentifier:@"com.apple.dock"]) {
+		[app activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+		break;
+	}
+	[self performSelector:@selector(forceUnbundledWindowActivationHackStep2) withObject:nil afterDelay:0.02];
+}
+
+- (void)forceUnbundledWindowActivationHackStep2 {
+	// Step 2: Register app as foreground process.
+	ProcessSerialNumber psn = { 0, kCurrentProcess };
+	(void)TransformProcessType(&psn, kProcessTransformToForegroundApplication);
+
+	[self performSelector:@selector(forceUnbundledWindowActivationHackStep3) withObject:nil afterDelay:0.02];
+}
+
+- (void)forceUnbundledWindowActivationHackStep3 {
+	// Step 3: Switch focus back to app window.
+	[[NSRunningApplication currentApplication] activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+}
+
+- (void)applicationDidFinishLaunching:(NSNotification *)notice {
+	NSString *nsappname = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"];
+	if (nsappname == nil) {
+		// If executable is not a bundled, macOS WindowServer won't register and activate app window correctly (menu and title bar are grayed out and input ignored).
+		[self performSelector:@selector(forceUnbundledWindowActivationHackStep1) withObject:nil afterDelay:0.02];
+	}
+}
 
 - (BOOL)application:(NSApplication *)sender openFile:(NSString *)filename {
 	// Note: called before main loop init!
@@ -228,6 +262,7 @@ static Vector2 get_mouse_pos(NSEvent *event) {
 	NSWindow *window = (NSWindow *)[notification object];
 	CGFloat newBackingScaleFactor = [window backingScaleFactor];
 	CGFloat oldBackingScaleFactor = [[[notification userInfo] objectForKey:@"NSBackingPropertyOldScaleFactorKey"] doubleValue];
+	[OS_OSX::singleton->window_view setWantsBestResolutionOpenGLSurface:YES];
 
 	if (newBackingScaleFactor != oldBackingScaleFactor) {
 		//Set new display scale and window size
@@ -1068,7 +1103,7 @@ Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 
 	unsigned int attributeCount = 0;
 
-	// OS X needs non-zero color size, so set resonable values
+	// OS X needs non-zero color size, so set reasonable values
 	int colorBits = 32;
 
 	// Fail if a robustness strategy was requested
@@ -1114,7 +1149,7 @@ Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 */
 
 	// NOTE: All NSOpenGLPixelFormats on the relevant cards support sRGB
-	//       frambuffer, so there's no need (and no way) to request it
+	//       framebuffer, so there's no need (and no way) to request it
 
 	ADD_ATTR(0);
 
@@ -1845,6 +1880,12 @@ Size2 OS_OSX::get_window_size() const {
 	return window_size;
 };
 
+Size2 OS_OSX::get_real_window_size() const {
+
+	NSRect frame = [window_object frame];
+	return Size2(frame.size.width, frame.size.height);
+}
+
 void OS_OSX::set_window_size(const Size2 p_size) {
 
 	Size2 size = p_size;
@@ -1934,6 +1975,20 @@ bool OS_OSX::is_window_maximized() const {
 void OS_OSX::move_window_to_foreground() {
 
 	[window_object orderFrontRegardless];
+}
+
+void OS_OSX::set_window_always_on_top(bool p_enabled) {
+	if (is_window_always_on_top() == p_enabled)
+		return;
+
+	if (p_enabled)
+		[window_object setLevel:NSFloatingWindowLevel];
+	else
+		[window_object setLevel:NSNormalWindowLevel];
+}
+
+bool OS_OSX::is_window_always_on_top() const {
+	return [window_object level] == NSFloatingWindowLevel;
 }
 
 void OS_OSX::request_attention() {
@@ -2281,7 +2336,7 @@ OS_OSX::OS_OSX() {
 	NSMenuItem *menu_item;
 	NSString *title;
 
-	NSString *nsappname = [[[NSBundle mainBundle] performSelector:@selector(localizedInfoDictionary)] objectForKey:@"CFBundleName"];
+	NSString *nsappname = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"];
 	if (nsappname == nil)
 		nsappname = [[NSProcessInfo processInfo] processName];
 

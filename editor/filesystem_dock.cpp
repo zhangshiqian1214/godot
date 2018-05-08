@@ -492,7 +492,7 @@ void FileSystemDock::_update_files(bool p_keep_selection) {
 		Ref<Texture> folderIcon = (use_thumbnails) ? folder_thumbnail : get_icon("folder", "FileDialog");
 
 		if (path != "res://") {
-			files->add_item("..", folderIcon, false);
+			files->add_item("..", folderIcon, true);
 
 			String bd = path.get_base_dir();
 			if (bd != "res://" && !bd.ends_with("/"))
@@ -917,7 +917,7 @@ void FileSystemDock::_make_dir_confirm() {
 	if (dir_name.length() == 0) {
 		EditorNode::get_singleton()->show_warning(TTR("No name provided"));
 		return;
-	} else if (dir_name.find("/") != -1 || dir_name.find("\\") != -1 || dir_name.find(":") != -1) {
+	} else if (dir_name.find("/") != -1 || dir_name.find("\\") != -1 || dir_name.find(":") != -1 || dir_name.ends_with(".")) {
 		EditorNode::get_singleton()->show_warning(TTR("Provided name contains invalid characters"));
 		return;
 	}
@@ -957,7 +957,12 @@ void FileSystemDock::_rename_operation_confirm() {
 
 	//Present a more user friendly warning for name conflict
 	DirAccess *da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
+#if defined(WINDOWS_ENABLED) || defined(UWP_ENABLED)
+	// Workaround case insensitivity on Windows
+	if ((da->file_exists(new_path) || da->dir_exists(new_path)) && new_path.to_lower() != old_path.to_lower()) {
+#else
 	if (da->file_exists(new_path) || da->dir_exists(new_path)) {
+#endif
 		EditorNode::get_singleton()->show_warning(TTR("A file or folder with this name already exists."));
 		memdelete(da);
 		return;

@@ -94,15 +94,17 @@ public:
 		bool resizable;
 		bool borderless_window;
 		bool maximized;
+		bool always_on_top;
 		bool use_vsync;
 		float get_aspect() const { return (float)width / (float)height; }
-		VideoMode(int p_width = 1024, int p_height = 600, bool p_fullscreen = false, bool p_resizable = true, bool p_borderless_window = false, bool p_maximized = false, bool p_use_vsync = false) {
+		VideoMode(int p_width = 1024, int p_height = 600, bool p_fullscreen = false, bool p_resizable = true, bool p_borderless_window = false, bool p_maximized = false, bool p_always_on_top = false, bool p_use_vsync = false) {
 			width = p_width;
 			height = p_height;
 			fullscreen = p_fullscreen;
 			resizable = p_resizable;
 			borderless_window = p_borderless_window;
 			maximized = p_maximized;
+			always_on_top = p_always_on_top;
 			use_vsync = p_use_vsync;
 		}
 	};
@@ -182,6 +184,7 @@ public:
 	virtual Point2 get_window_position() const { return Vector2(); }
 	virtual void set_window_position(const Point2 &p_position) {}
 	virtual Size2 get_window_size() const = 0;
+	virtual Size2 get_real_window_size() const { return get_window_size(); }
 	virtual void set_window_size(const Size2 p_size) {}
 	virtual void set_window_fullscreen(bool p_enabled) {}
 	virtual bool is_window_fullscreen() const { return true; }
@@ -191,7 +194,22 @@ public:
 	virtual bool is_window_minimized() const { return false; }
 	virtual void set_window_maximized(bool p_enabled) {}
 	virtual bool is_window_maximized() const { return true; }
+	virtual void set_window_always_on_top(bool p_enabled) {}
+	virtual bool is_window_always_on_top() const { return false; }
 	virtual void request_attention() {}
+	virtual void center_window();
+
+	// Returns window area free of hardware controls and other obstacles.
+	// The application should use this to determine where to place UI elements.
+	//
+	// Keep in mind the area returned is in window coordinates rather than
+	// viewport coordinates - you should perform the conversion on your own.
+	//
+	// The maximum size of the area is Rect2(0, 0, window_size.width, window_size.height).
+	virtual Rect2 get_window_safe_area() const {
+		Size2 window_size = get_window_size();
+		return Rect2(0, 0, window_size.width, window_size.height);
+	}
 
 	virtual void set_borderless_window(bool p_borderless) {}
 	virtual bool get_borderless_window() { return 0; }

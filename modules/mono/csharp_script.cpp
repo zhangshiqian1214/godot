@@ -118,6 +118,8 @@ void CSharpLanguage::init() {
 
 #ifdef TOOLS_ENABLED
 	EditorNode::add_init_callback(&gdsharp_editor_init_callback);
+
+	GLOBAL_DEF("mono/export/include_scripts_content", true);
 #endif
 }
 
@@ -280,6 +282,15 @@ void CSharpLanguage::get_string_delimiters(List<String> *p_delimiters) const {
 	p_delimiters->push_back("@\" \""); // verbatim string literal
 }
 
+static String get_base_class_name(const String &p_base_class_name, const String p_class_name) {
+
+	String base_class = p_base_class_name;
+	if (p_class_name == base_class) {
+		base_class = "Godot." + base_class;
+	}
+	return base_class;
+}
+
 Ref<Script> CSharpLanguage::get_template(const String &p_class_name, const String &p_base_class_name) const {
 
 	String script_template = "using " BINDINGS_NAMESPACE ";\n"
@@ -306,7 +317,8 @@ Ref<Script> CSharpLanguage::get_template(const String &p_class_name, const Strin
 							 "//    }\n"
 							 "}\n";
 
-	script_template = script_template.replace("%BASE_CLASS_NAME%", p_base_class_name)
+	String base_class_name = get_base_class_name(p_base_class_name, p_class_name);
+	script_template = script_template.replace("%BASE_CLASS_NAME%", base_class_name)
 							  .replace("%CLASS_NAME%", p_class_name);
 
 	Ref<CSharpScript> script;
@@ -325,10 +337,22 @@ bool CSharpLanguage::is_using_templates() {
 void CSharpLanguage::make_template(const String &p_class_name, const String &p_base_class_name, Ref<Script> &p_script) {
 
 	String src = p_script->get_source_code();
-	src = src.replace("%BASE%", p_base_class_name)
+	String base_class_name = get_base_class_name(p_base_class_name, p_class_name);
+	src = src.replace("%BASE%", base_class_name)
 				  .replace("%CLASS%", p_class_name)
 				  .replace("%TS%", _get_indentation());
 	p_script->set_source_code(src);
+}
+
+String CSharpLanguage::validate_path(const String &p_path) const {
+
+	String class_name = p_path.get_file().get_basename();
+	List<String> keywords;
+	get_reserved_words(&keywords);
+	if (keywords.find(class_name)) {
+		return TTR("Class name can't be a reserved keyword");
+	}
+	return "";
 }
 
 Script *CSharpLanguage::create_script() const {
@@ -454,7 +478,7 @@ Vector<ScriptLanguage::StackInfo> CSharpLanguage::debug_get_current_stack_info()
 #ifdef DEBUG_ENABLED
 	// Printing an error here will result in endless recursion, so we must be careful
 
-	if (!gdmono->is_runtime_initialized() || !GDMono::get_singleton()->get_api_assembly() || !GDMonoUtils::mono_cache.corlib_cache_updated)
+	if (!gdmono->is_runtime_initialized() || !GDMono::get_singleton()->get_core_api_assembly() || !GDMonoUtils::mono_cache.corlib_cache_updated)
 		return Vector<StackInfo>();
 
 	MonoObject *stack_trace = mono_object_new(mono_domain_get(), CACHED_CLASS(System_Diagnostics_StackTrace)->get_mono_ptr());
@@ -721,8 +745,10 @@ void CSharpLanguage::reload_assemblies_if_needed(bool p_soft_reload) {
 	for (Map<Ref<CSharpScript>, Map<ObjectID, List<Pair<StringName, Variant> > > >::Element *E = to_reload.front(); E; E = E->next()) {
 
 		Ref<CSharpScript> scr = E->key();
+		scr->signals_invalidated = true;
 		scr->exports_invalidated = true;
 		scr->reload(p_soft_reload);
+		scr->update_signals();
 		scr->update_exports();
 
 		//restore state if saved
@@ -755,8 +781,10 @@ void CSharpLanguage::reload_assemblies_if_needed(bool p_soft_reload) {
 		//if instance states were saved, set them!
 	}
 
-	if (Engine::get_singleton()->is_editor_hint())
+	if (Engine::get_singleton()->is_editor_hint()) {
 		EditorNode::get_singleton()->get_property_editor()->update_tree();
+		NodeDock::singleton->update_lists();
+	}
 }
 #endif
 
@@ -1545,6 +1573,74 @@ bool CSharpScript::_update_exports() {
 	return false;
 }
 
+bool CSharpScript::_update_signals() {
+	if (!valid)
+		return false;
+
+	bool changed = false;
+
+	if (signals_invalidated) {
+		signals_invalidated = false;
+
+		GDMonoClass *top = script_class;
+
+		_signals.clear();
+		changed = true; // TODO Do a real check for change
+
+		while (top && top != native) {
+			const Vector<GDMonoClass *> &delegates = top->get_all_delegates();
+			for (int i = delegates.size() - 1; i >= 0; --i) {
+				Vector<Argument> parameters;
+
+				GDMonoClass *delegate = delegates[i];
+
+				if (_get_signal(top, delegate, parameters)) {
+					_signals[delegate->get_name()] = parameters;
+				}
+			}
+
+			top = top->get_parent_class();
+		}
+	}
+
+	return changed;
+}
+
+bool CSharpScript::_get_signal(GDMonoClass *p_class, GDMonoClass *p_delegate, Vector<Argument> &params) {
+	if (p_delegate->has_attribute(CACHED_CLASS(SignalAttribute))) {
+		MonoType *raw_type = GDMonoClass::get_raw_type(p_delegate);
+
+		if (mono_type_get_type(raw_type) == MONO_TYPE_CLASS) {
+			// Arguments are accessibles as arguments of .Invoke method
+			GDMonoMethod *invoke = p_delegate->get_method("Invoke", -1);
+
+			Vector<StringName> names;
+			Vector<ManagedType> types;
+			invoke->get_parameter_names(names);
+			invoke->get_parameter_types(types);
+
+			if (names.size() == types.size()) {
+				for (int i = 0; i < names.size(); ++i) {
+					Argument arg;
+					arg.name = names[i];
+					arg.type = GDMonoMarshal::managed_to_variant_type(types[i]);
+
+					if (arg.type == Variant::NIL) {
+						ERR_PRINTS("Unknown type of signal parameter: " + arg.name + " in " + p_class->get_full_name());
+						return false;
+					}
+
+					params.push_back(arg);
+				}
+
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 #ifdef TOOLS_ENABLED
 bool CSharpScript::_get_member_export(GDMonoClass *p_class, GDMonoClassMember *p_member, PropertyInfo &r_prop_info, bool &r_exported) {
 
@@ -1858,19 +1954,26 @@ Variant CSharpScript::_new(const Variant **p_args, int p_argcount, Variant::Call
 
 ScriptInstance *CSharpScript::instance_create(Object *p_this) {
 
-	if (!valid)
-		return NULL;
+	if (!script_class) {
+		ERR_EXPLAIN("Cannot find class " + name + " for script " + get_path());
+		ERR_FAIL_V(NULL);
+	}
+
+	ERR_FAIL_COND_V(!valid, NULL);
 
 	if (!tool && !ScriptServer::is_scripting_enabled()) {
 #ifdef TOOLS_ENABLED
 		PlaceHolderScriptInstance *si = memnew(PlaceHolderScriptInstance(CSharpLanguage::get_singleton(), Ref<Script>(this), p_this));
 		placeholders.insert(si);
 		_update_exports();
+		_update_signals();
 		return si;
 #else
 		return NULL;
 #endif
 	}
+
+	update_signals();
 
 	if (native) {
 		String native_name = native->get_name();
@@ -1946,20 +2049,15 @@ Error CSharpScript::reload(bool p_keep_state) {
 	if (project_assembly) {
 		script_class = project_assembly->get_object_derived_class(name);
 
-		if (!script_class) {
-			ERR_PRINTS("Cannot find class " + name + " for script " + get_path());
-		}
-#ifdef DEBUG_ENABLED
-		else if (OS::get_singleton()->is_stdout_verbose()) {
-			OS::get_singleton()->print(String("Found class " + script_class->get_namespace() + "." +
-											  script_class->get_name() + " for script " + get_path() + "\n")
-											   .utf8());
-		}
-#endif
-
 		valid = script_class != NULL;
 
 		if (script_class) {
+#ifdef DEBUG_ENABLED
+			OS::get_singleton()->print(String("Found class " + script_class->get_namespace() + "." +
+											  script_class->get_name() + " for script " + get_path() + "\n")
+											   .utf8());
+#endif
+
 			tool = script_class->has_attribute(CACHED_CLASS(ToolAttribute));
 
 			native = GDMonoUtils::get_class_native_base(script_class);
@@ -2035,6 +2133,31 @@ void CSharpScript::update_exports() {
 #endif
 }
 
+bool CSharpScript::has_script_signal(const StringName &p_signal) const {
+	if (_signals.has(p_signal))
+		return true;
+
+	return false;
+}
+
+void CSharpScript::get_script_signal_list(List<MethodInfo> *r_signals) const {
+	for (const Map<StringName, Vector<Argument> >::Element *E = _signals.front(); E; E = E->next()) {
+		MethodInfo mi;
+
+		mi.name = E->key();
+		for (int i = 0; i < E->get().size(); i++) {
+			PropertyInfo arg;
+			arg.name = E->get()[i].name;
+			mi.arguments.push_back(arg);
+		}
+		r_signals->push_back(mi);
+	}
+}
+
+void CSharpScript::update_signals() {
+	_update_signals();
+}
+
 Ref<Script> CSharpScript::get_base_script() const {
 
 	// TODO search in metadata file once we have it, not important any way?
@@ -2099,6 +2222,7 @@ CSharpScript::CSharpScript() :
 #ifdef TOOLS_ENABLED
 	source_changed_cache = false;
 	exports_invalidated = true;
+	signals_invalidated = true;
 #endif
 
 	_resource_path_changed();
@@ -2163,7 +2287,9 @@ RES ResourceFormatLoaderCSharpScript::load(const String &p_path, const String &p
 	CRASH_COND(mono_domain_get() == NULL);
 #endif
 
-#else
+#endif
+
+#ifdef TOOLS_ENABLED
 	if (Engine::get_singleton()->is_editor_hint() && mono_domain_get() == NULL) {
 
 		CRASH_COND(Thread::get_caller_id() == Thread::get_main_id());
@@ -2172,14 +2298,20 @@ RES ResourceFormatLoaderCSharpScript::load(const String &p_path, const String &p
 		// because this may be called by one of the editor's worker threads.
 		// Attach this thread temporarily to reload the script.
 
-		MonoThread *mono_thread = mono_thread_attach(SCRIPTS_DOMAIN);
-		CRASH_COND(mono_thread == NULL);
-		script->reload();
-		mono_thread_detach(mono_thread);
+		if (SCRIPTS_DOMAIN) {
+			MonoThread *mono_thread = mono_thread_attach(SCRIPTS_DOMAIN);
+			CRASH_COND(mono_thread == NULL);
+			script->reload();
+			mono_thread_detach(mono_thread);
+		}
 
-	} else // just reload it normally
+	} else { // just reload it normally
 #endif
-	script->reload();
+		script->reload();
+
+#ifdef TOOLS_ENABLED
+	}
+#endif
 
 	if (r_error)
 		*r_error = OK;

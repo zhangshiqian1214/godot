@@ -296,7 +296,7 @@ Error OS_Unix::execute(const String &p_path, const List<String> &p_arguments, bo
 
 		Vector<char *> args;
 		for (int i = 0; i < cs.size(); i++)
-			args.push_back((char *)cs[i].get_data()); // shitty C cast
+			args.push_back((char *)cs[i].get_data());
 		args.push_back(0);
 
 		execvp(p_path.utf8().get_data(), &args[0]);
@@ -356,6 +356,12 @@ String OS_Unix::get_locale() const {
 Error OS_Unix::open_dynamic_library(const String p_path, void *&p_library_handle, bool p_also_set_library_path) {
 
 	String path = p_path;
+
+	if (FileAccess::exists(path) && path.is_rel_path()) {
+		// dlopen expects a slash, in this case a leading ./ for it to be interpreted as a relative path,
+		//  otherwise it will end up searching various system directories for the lib instead and finally failing.
+		path = "./" + path;
+	}
 
 	if (!FileAccess::exists(path)) {
 		//this code exists so gdnative can load .so files from within the executable path

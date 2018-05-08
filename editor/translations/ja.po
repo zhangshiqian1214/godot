@@ -12,20 +12,20 @@
 # Lexi Grafen <shfeedly@gmail.com>, 2017.
 # NoahDigital <taku_58@hotmail.com>, 2017.
 # Tetsuji Ochiai <ochiaixp@gmail.com>, 2017.
-# Tohru Ike (rokujyouhitoma) <rokujyouhitomajp@gmail.com>, 2017.
+# Tohru Ike (rokujyouhitoma) <rokujyouhitomajp@gmail.com>, 2017-2018.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: Godot Engine editor\n"
-"PO-Revision-Date: 2018-01-06 13:19+0000\n"
-"Last-Translator: NoahDigital <taku_58@hotmail.com>\n"
+"PO-Revision-Date: 2018-04-02 08:38+0000\n"
+"Last-Translator: Tohru Ike (rokujyouhitoma) <rokujyouhitomajp@gmail.com>\n"
 "Language-Team: Japanese <https://hosted.weblate.org/projects/godot-engine/"
 "godot/ja/>\n"
 "Language: ja\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8-bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Weblate 2.19-dev\n"
+"X-Generator: Weblate 2.20-dev\n"
 
 #: editor/animation_editor.cpp
 msgid "Disabled"
@@ -468,7 +468,6 @@ msgstr "追加"
 #: editor/plugins/animation_tree_editor_plugin.cpp
 #: editor/plugins/theme_editor_plugin.cpp editor/project_manager.cpp
 #: editor/project_settings_editor.cpp
-#, fuzzy
 msgid "Remove"
 msgstr "削除"
 
@@ -1553,6 +1552,10 @@ msgstr "削除"
 #, fuzzy
 msgid "Clear Output"
 msgstr "出力"
+
+#: editor/editor_node.cpp
+msgid "Project export failed with error code %d."
+msgstr ""
 
 #: editor/editor_node.cpp editor/plugins/animation_player_editor_plugin.cpp
 #, fuzzy
@@ -2746,14 +2749,6 @@ msgid "Invalid version.txt format inside templates."
 msgstr "テンプレート内のversion.txt フォーマットが不正です."
 
 #: editor/export_template_manager.cpp
-msgid ""
-"Invalid version.txt format inside templates. Revision is not a valid "
-"identifier."
-msgstr ""
-"テンプレート内のversion.txt フォーマットが不正です. Revisionは有効な識別子で"
-"はありません."
-
-#: editor/export_template_manager.cpp
 msgid "No version.txt found inside templates."
 msgstr "テンプレート内にversion.txtが見つかりません."
 
@@ -2812,10 +2807,6 @@ msgstr "リダイレクトのループ."
 #: editor/plugins/asset_library_editor_plugin.cpp
 msgid "Failed:"
 msgstr "失敗:"
-
-#: editor/export_template_manager.cpp
-msgid "Can't write file."
-msgstr "ファイルに書き込みできませんでした."
 
 #: editor/export_template_manager.cpp
 msgid "Download Complete."
@@ -4145,18 +4136,28 @@ msgstr "グリッドを表示"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
 #, fuzzy
-msgid "Show helpers"
+msgid "Show Helpers"
 msgstr "ボーンを表示する"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
 #, fuzzy
-msgid "Show rulers"
+msgid "Show Rulers"
 msgstr "ボーンを表示する"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
 #, fuzzy
-msgid "Show guides"
+msgid "Show Guides"
 msgstr "ボーンを表示する"
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+#, fuzzy
+msgid "Show Origin"
+msgstr "原点を見る"
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+#, fuzzy
+msgid "Show Viewport"
+msgstr "1 ビューポート"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
 #, fuzzy
@@ -4477,6 +4478,10 @@ msgstr "メッシュインスタンスのメッシュが存在しません"
 #, fuzzy
 msgid "Mesh has not surface to create outlines from!"
 msgstr "メッシュにアウトラインを作成するためのサーフェイスが存在しません"
+
+#: editor/plugins/mesh_instance_editor_plugin.cpp
+msgid "Mesh primitive type is not PRIMITIVE_TRIANGLES!"
+msgstr ""
 
 #: editor/plugins/mesh_instance_editor_plugin.cpp
 #, fuzzy
@@ -5106,6 +5111,23 @@ msgid "Resource clipboard is empty!"
 msgstr "リソースのクリップボードは空です!"
 
 #: editor/plugins/resource_preloader_editor_plugin.cpp
+#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
+msgid "Open in Editor"
+msgstr "エディタで開く"
+
+#: editor/plugins/resource_preloader_editor_plugin.cpp
+#: editor/scene_tree_editor.cpp
+msgid "Instance:"
+msgstr "インスタンス:"
+
+#: editor/plugins/resource_preloader_editor_plugin.cpp
+#: editor/plugins/theme_editor_plugin.cpp editor/project_settings_editor.cpp
+#: editor/scene_tree_editor.cpp editor/script_editor_debugger.cpp
+#, fuzzy
+msgid "Type:"
+msgstr "型(Type):"
+
+#: editor/plugins/resource_preloader_editor_plugin.cpp
 #: editor/plugins/sprite_frames_editor_plugin.cpp
 msgid "Load Resource"
 msgstr "リソースを読み込む"
@@ -5418,11 +5440,6 @@ msgstr "コメントを切り替える"
 
 #: editor/plugins/script_text_editor.cpp
 #, fuzzy
-msgid "Clone Down"
-msgstr "複製してダウンロード"
-
-#: editor/plugins/script_text_editor.cpp
-#, fuzzy
 msgid "Fold/Unfold Line"
 msgstr "行に移動"
 
@@ -5433,6 +5450,11 @@ msgstr ""
 #: editor/plugins/script_text_editor.cpp
 msgid "Unfold All Lines"
 msgstr ""
+
+#: editor/plugins/script_text_editor.cpp
+#, fuzzy
+msgid "Clone Down"
+msgstr "複製してダウンロード"
 
 #: editor/plugins/script_text_editor.cpp
 #, fuzzy
@@ -6317,6 +6339,16 @@ msgid "Checked Item"
 msgstr "チェック済みアイテム"
 
 #: editor/plugins/theme_editor_plugin.cpp
+#, fuzzy
+msgid "Radio Item"
+msgstr "アイテムを追加"
+
+#: editor/plugins/theme_editor_plugin.cpp
+#, fuzzy
+msgid "Checked Radio Item"
+msgstr "チェック済みアイテム"
+
+#: editor/plugins/theme_editor_plugin.cpp
 msgid "Has"
 msgstr ""
 
@@ -6343,12 +6375,6 @@ msgstr "タブ2"
 #: editor/plugins/theme_editor_plugin.cpp
 msgid "Tab 3"
 msgstr "タブ3"
-
-#: editor/plugins/theme_editor_plugin.cpp editor/project_settings_editor.cpp
-#: editor/scene_tree_editor.cpp editor/script_editor_debugger.cpp
-#, fuzzy
-msgid "Type:"
-msgstr "型(Type):"
 
 #: editor/plugins/theme_editor_plugin.cpp
 #, fuzzy
@@ -6643,10 +6669,6 @@ msgid "Please choose an empty folder."
 msgstr "'project.godot' ファイルを選択してください."
 
 #: editor/project_manager.cpp
-msgid "Please choose a folder that does not contain a 'project.godot' file."
-msgstr "'project.godot'がないフォルダを選択してください."
-
-#: editor/project_manager.cpp
 msgid "Imported Project"
 msgstr "インポートされたプロジェクト"
 
@@ -6670,7 +6692,9 @@ msgstr "不正なプロジェクトのパス（何か変えましたか？）"
 
 #: editor/project_manager.cpp
 #, fuzzy
-msgid "Couldn't get project.godot in project path."
+msgid ""
+"Couldn't load project.godot in project path (error %d). It may be missing or "
+"corrupted."
 msgstr "project.godotをプロジェクトパスに生成できませんでした"
 
 #: editor/project_manager.cpp
@@ -6692,11 +6716,6 @@ msgstr "以下のファイルをパッケージから抽出できませんでし
 #, fuzzy
 msgid "Rename Project"
 msgstr "名無しのプロジェクト"
-
-#: editor/project_manager.cpp
-#, fuzzy
-msgid "Couldn't get project.godot in the project path."
-msgstr "project.godotをプロジェクトパスに生成できませんでした"
 
 #: editor/project_manager.cpp
 msgid "New Game Project"
@@ -6846,6 +6865,8 @@ msgid ""
 "You don't currently have any projects.\n"
 "Would you like to explore the official example projects in the Asset Library?"
 msgstr ""
+"あなたは現在どのプロジェクトも持っていません。\n"
+"アセットライブラリで公式のサンプルプロジェクトを探しましょうか？"
 
 #: editor/project_settings_editor.cpp
 #, fuzzy
@@ -6867,8 +6888,10 @@ msgid "Mouse Button"
 msgstr "マウスボタン"
 
 #: editor/project_settings_editor.cpp
-msgid "Invalid action (anything goes but '/' or ':')."
-msgstr "不正なアクション（ '/' と':'は不可です）."
+msgid ""
+"Invalid action name. it cannot be empty nor contain '/', ':', '=', '\\' or "
+"'\"'"
+msgstr ""
 
 #: editor/project_settings_editor.cpp
 msgid "Action '%s' already exists!"
@@ -7021,11 +7044,6 @@ msgstr ""
 #, fuzzy
 msgid "Delete Item"
 msgstr "入力を消去"
-
-#: editor/project_settings_editor.cpp
-#, fuzzy
-msgid "Can't contain '/' or ':'"
-msgstr "ホストに接続できません:"
 
 #: editor/project_settings_editor.cpp
 #, fuzzy
@@ -7471,10 +7489,6 @@ msgstr "サブリソース:"
 msgid "Clear Inheritance"
 msgstr "継承をクリアする"
 
-#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
-msgid "Open in Editor"
-msgstr "エディタで開く"
-
 #: editor/scene_tree_dock.cpp
 msgid "Delete Node(s)"
 msgstr "ノードを消去"
@@ -7608,10 +7622,6 @@ msgid ""
 msgstr ""
 "ノードはグループに属しています.\n"
 "クリックしてグループのドックを表示してください."
-
-#: editor/scene_tree_editor.cpp
-msgid "Instance:"
-msgstr "インスタンス:"
 
 #: editor/scene_tree_editor.cpp
 #, fuzzy
@@ -8080,6 +8090,32 @@ msgstr "オブジェクトに長さがありません."
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
 #, fuzzy
+msgid "Next Plane"
+msgstr "次のタブ"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+#, fuzzy
+msgid "Previous Plane"
+msgstr "以前のタブ"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Plane:"
+msgstr ""
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Next Floor"
+msgstr "次の床面"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Previous Floor"
+msgstr "前の床面"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+msgid "Floor:"
+msgstr "床面:"
+
+#: modules/gridmap/grid_map_editor_plugin.cpp
+#, fuzzy
 msgid "GridMap Delete Selection"
 msgstr "選択範囲を消去"
 
@@ -8087,10 +8123,6 @@ msgstr "選択範囲を消去"
 #, fuzzy
 msgid "GridMap Duplicate Selection"
 msgstr "選択範囲を複製"
-
-#: modules/gridmap/grid_map_editor_plugin.cpp
-msgid "Floor:"
-msgstr "床面:"
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
 #, fuzzy
@@ -8101,14 +8133,6 @@ msgstr "グリッドSnap"
 #, fuzzy
 msgid "Snap View"
 msgstr "上面図"
-
-#: modules/gridmap/grid_map_editor_plugin.cpp
-msgid "Previous Floor"
-msgstr "前の床面"
-
-#: modules/gridmap/grid_map_editor_plugin.cpp
-msgid "Next Floor"
-msgstr "次の床面"
 
 #: modules/gridmap/grid_map_editor_plugin.cpp
 #, fuzzy
@@ -8196,6 +8220,10 @@ msgstr "Snapの設定"
 msgid "Pick Distance:"
 msgstr "インスタンス:"
 
+#: modules/mono/csharp_script.cpp
+msgid "Class name can't be a reserved keyword"
+msgstr ""
+
 #: modules/mono/editor/godotsharp_editor.cpp
 #, fuzzy
 msgid "Generating solution..."
@@ -8230,6 +8258,10 @@ msgid "Mono"
 msgstr "モノラル音声"
 
 #: modules/mono/editor/godotsharp_editor.cpp
+msgid "About C# support"
+msgstr ""
+
+#: modules/mono/editor/godotsharp_editor.cpp
 #, fuzzy
 msgid "Create C# solution"
 msgstr "アウトラインを生成"
@@ -8247,6 +8279,10 @@ msgstr "プロジェクト"
 #, fuzzy
 msgid "Warnings"
 msgstr "警告"
+
+#: modules/mono/mono_gd/gd_mono_utils.cpp
+msgid "End of inner exception stack trace"
+msgstr ""
 
 #: modules/visual_script/visual_script.cpp
 #, fuzzy
@@ -8865,6 +8901,14 @@ msgid "ARVROrigin requires an ARVRCamera child node"
 msgstr "ARVROriginはARVRCamera子ノードが必要です"
 
 #: scene/3d/baked_lightmap.cpp
+msgid "%d%%"
+msgstr ""
+
+#: scene/3d/baked_lightmap.cpp
+msgid "(Time Left: %d:%02d s)"
+msgstr ""
+
+#: scene/3d/baked_lightmap.cpp
 #, fuzzy
 msgid "Plotting Meshes: "
 msgstr "イメージを配置(Blit)"
@@ -8963,12 +9007,22 @@ msgstr ""
 "す。"
 
 #: scene/3d/scenario_fx.cpp
+msgid "WorldEnvironment needs an Environment resource."
+msgstr ""
+
+#: scene/3d/scenario_fx.cpp
 #, fuzzy
 msgid ""
 "Only one WorldEnvironment is allowed per scene (or set of instanced scenes)."
 msgstr ""
 "1 つだけの WorldEnvironment は、シーン (またはインスタンス化されたシーンの"
 "セット) ごとに許可されます。"
+
+#: scene/3d/scenario_fx.cpp
+msgid ""
+"This WorldEnvironment is ignored. Either add a Camera (for 3D scenes) or set "
+"this environment's Background Mode to Canvas (for 2D scenes)."
+msgstr ""
 
 #: scene/3d/sprite_3d.cpp
 msgid ""
@@ -9069,6 +9123,34 @@ msgstr "フォント読み込みエラー。"
 #: scene/resources/dynamic_font.cpp
 msgid "Invalid font size."
 msgstr "無効なフォント サイズです。"
+
+#~ msgid "Invalid action (anything goes but '/' or ':')."
+#~ msgstr "不正なアクション（ '/' と':'は不可です）."
+
+#, fuzzy
+#~ msgid "Can't contain '/' or ':'"
+#~ msgstr "ホストに接続できません:"
+
+#~ msgid ""
+#~ "Invalid version.txt format inside templates. Revision is not a valid "
+#~ "identifier."
+#~ msgstr ""
+#~ "テンプレート内のversion.txt フォーマットが不正です. Revisionは有効な識別子"
+#~ "ではありません."
+
+#~ msgid "Can't write file."
+#~ msgstr "ファイルに書き込みできませんでした."
+
+#~ msgid "Please choose a folder that does not contain a 'project.godot' file."
+#~ msgstr "'project.godot'がないフォルダを選択してください."
+
+#, fuzzy
+#~ msgid "Couldn't get project.godot in project path."
+#~ msgstr "project.godotをプロジェクトパスに生成できませんでした"
+
+#, fuzzy
+#~ msgid "Couldn't get project.godot in the project path."
+#~ msgstr "project.godotをプロジェクトパスに生成できませんでした"
 
 #~ msgid "Next"
 #~ msgstr "次"

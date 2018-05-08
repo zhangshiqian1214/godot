@@ -626,8 +626,8 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_color("font_color_disabled", "PopupMenu", font_color_disabled);
 	theme->set_icon("checked", "PopupMenu", theme->get_icon("GuiChecked", "EditorIcons"));
 	theme->set_icon("unchecked", "PopupMenu", theme->get_icon("GuiUnchecked", "EditorIcons"));
-	theme->set_icon("radio_checked", "PopupMenu", theme->get_icon("GuiChecked", "EditorIcons"));
-	theme->set_icon("radio_unchecked", "PopupMenu", theme->get_icon("GuiUnchecked", "EditorIcons"));
+	theme->set_icon("radio_checked", "PopupMenu", theme->get_icon("GuiRadioChecked", "EditorIcons"));
+	theme->set_icon("radio_unchecked", "PopupMenu", theme->get_icon("GuiRadioUnchecked", "EditorIcons"));
 	theme->set_icon("submenu", "PopupMenu", theme->get_icon("ArrowRight", "EditorIcons"));
 	theme->set_icon("visibility_hidden", "PopupMenu", theme->get_icon("GuiVisibilityHidden", "EditorIcons"));
 	theme->set_icon("visibility_visible", "PopupMenu", theme->get_icon("GuiVisibilityVisible", "EditorIcons"));
@@ -1139,7 +1139,9 @@ Ref<Theme> create_custom_theme(const Ref<Theme> p_theme) {
 	String custom_theme = EditorSettings::get_singleton()->get("interface/theme/custom_theme");
 	if (custom_theme != "") {
 		theme = ResourceLoader::load(custom_theme);
-	} else {
+	}
+
+	if (!theme.is_valid()) {
 		theme = create_editor_theme(p_theme);
 	}
 
