@@ -62,7 +62,7 @@ namespace Godot
             }
         }
 
-        private real_t Cross(Vector2 b)
+        public real_t Cross(Vector2 b)
         {
             return x * b.y - y * b.x;
         }
@@ -95,6 +95,11 @@ namespace Godot
         public Vector2 Bounce(Vector2 n)
         {
             return -Reflect(n);
+        }
+
+        public Vector2 Ceil()
+        {
+            return new Vector2(Mathf.Ceil(x), Mathf.Ceil(y));
         }
 
         public Vector2 Clamped(real_t length)
@@ -190,6 +195,11 @@ namespace Godot
             return new Vector2(Mathf.Cos(rads), Mathf.Sin(rads)) * Length();
         }
 
+        public Vector2 Round()
+        {
+            return new Vector2(Mathf.Round(x), Mathf.Round(y));
+        }
+
         public void Set(real_t x, real_t y)
         {
             this.x = x;
@@ -199,6 +209,12 @@ namespace Godot
         {
             x = v.x;
             y = v.y;
+        }
+        
+        public Vector2 Slerp(Vector2 b, real_t t)
+        {
+            real_t theta = AngleTo(b);
+            return Rotated(theta * t);
         }
 
         public Vector2 Slide(Vector2 n)

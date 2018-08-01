@@ -1521,6 +1521,13 @@ static void _find_identifiers(GDScriptCompletionContext &context, int p_line, bo
 		result.insert(_type_names[i]);
 	}
 
+	List<String> reserved_words;
+	GDScriptLanguage::get_singleton()->get_reserved_words(&reserved_words);
+
+	for (List<String>::Element *E = reserved_words.front(); E; E = E->next()) {
+		result.insert(E->get());
+	}
+
 	//autoload singletons
 	List<PropertyInfo> props;
 	ProjectSettings::get_singleton()->get_property_list(&props);
@@ -1805,7 +1812,7 @@ static void _find_type_arguments(GDScriptCompletionContext &context, const GDScr
 
 		} else {
 
-		//regular method
+			//regular method
 #if defined(DEBUG_METHODS_ENABLED) && defined(TOOLS_ENABLED)
 			if (p_argidx < m->get_argument_count()) {
 				PropertyInfo pi = m->get_argument_info(p_argidx);
@@ -2641,6 +2648,18 @@ Error GDScriptLanguage::lookup_code(const String &p_code, const String &p_symbol
 	context.function = p.get_completion_function();
 	context.base = p_owner;
 	context.base_path = p_base_path;
+
+	if (context._class && context._class->extends_class.size() > 0) {
+		bool success = false;
+		ClassDB::get_integer_constant(context._class->extends_class[0], p_symbol, &success);
+		if (success) {
+			r_result.type = ScriptLanguage::LookupResult::RESULT_CLASS_CONSTANT;
+			r_result.class_name = context._class->extends_class[0];
+			r_result.class_member = p_symbol;
+			return OK;
+		}
+	}
+
 	bool isfunction = false;
 
 	switch (p.get_completion_type()) {

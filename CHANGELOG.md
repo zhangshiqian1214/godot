@@ -4,6 +4,74 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [3.0.6] - 2018-07-29
+
+### Added
+
+ - Upgrade bundled OpenSSL to 1.0.2o.
+
+### Fixed
+
+ - Security issue relating to deserializing Variants.
+ - Several editor crashes.
+ - GLTF import fixes.
+ - Windows: Fix touch/pen input.
+ - Mono: --build-solutions now forces editor mode.
+ - Mono: Several bugfixes.
+ - Headless: Fix scene imports.
+
+## [3.0.5] - 2018-07-08
+
+### Added
+
+ - 'android_add_asset_dir('...') method to Android module gradle build config.
+
+### Fixed
+
+ - Android exporter no longer writes unnecessary permissions to the exported APK.
+ - Segfault when quitting the editor.
+ - Debugger 'focus stealing' now works more reliably.
+ - Subresources are now always saved when saving a scene.
+ - WebAssembly: Supply proper CORS heards.
+ - Mono: Annotated signal loading in exported projects.
+ - Mono: Serveral fixes.
+
+## [3.0.4] - 2018-06-23
+
+### Added
+
+- Fix for Bullet's heightmap collider.
+- Several documentation fixes.
+
+### Fixed
+
+- Threading problem causing asset library to crash on low threadcount systems.
+
+## [3.0.3] - 2018-06-13
+
+### Added
+
+- C# projects can now be exported for Windows, Linux, and MacOS targets.
+- Universal translation of touch to mouse.
+- Dynamic fonts can now have a hinting mode set.
+- print_tree_pretty() was added allowing a graphical view of the scene tree.
+- Restore purchases feature for iOS.
+- AudioStreamPlayer, AudioStreamPlayer2D, and AudioStreamPlayer3D now have a pitch scale property.
+- Show origin and Show viewport setting in 2D editor.
+- You can now set Godot windows as 'always on top'.
+- --print-fps options to print FPS to stdout.
+
+### Fixed
+
+- Mono: Signal parameters no longer crash the engine.
+- Asset library thread usage, this makes the asset library more responsive.
+- Several GLTF import fixes.
+- Several memory leaks.
+- iPhone X support.
+- Several fixes to audio drivers (WASAPI and PulseAudio).
+- Several crashes.
+- Export PCK/ZIP now works again.
+
 ## [3.0.2] - 2018-03-03
 
 ### Added

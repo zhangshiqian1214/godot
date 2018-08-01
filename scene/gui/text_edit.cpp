@@ -3005,13 +3005,64 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 			} break;
 			case KEY_A: {
 
-				if (!k->get_command() || k->get_shift() || k->get_alt()) {
+#ifndef APPLE_STYLE_KEYS
+				if (!k->get_control() || k->get_shift() || k->get_alt()) {
+					scancode_handled = false;
+					break;
+				}
+				select_all();
+#else
+				if ((!k->get_command() && !k->get_control())) {
+					scancode_handled = false;
+					break;
+				}
+				if (!k->get_shift() && k->get_command())
+					select_all();
+				else if (k->get_control()) {
+					if (k->get_shift())
+						_pre_shift_selection();
+
+					int current_line_whitespace_len = 0;
+					while (current_line_whitespace_len < text[cursor.line].length()) {
+						CharType c = text[cursor.line][current_line_whitespace_len];
+						if (c != '\t' && c != ' ')
+							break;
+						current_line_whitespace_len++;
+					}
+
+					if (cursor_get_column() == current_line_whitespace_len)
+						cursor_set_column(0);
+					else
+						cursor_set_column(current_line_whitespace_len);
+
+					if (k->get_shift())
+						_post_shift_selection();
+					else if (k->get_command() || k->get_control())
+						deselect();
+				}
+			} break;
+			case KEY_E: {
+
+				if (!k->get_control() || k->get_command() || k->get_alt()) {
 					scancode_handled = false;
 					break;
 				}
 
-				select_all();
+				if (k->get_shift())
+					_pre_shift_selection();
 
+				if (k->get_command())
+					cursor_set_line(text.size() - 1, true, false);
+				cursor_set_column(text[cursor.line].length());
+
+				if (k->get_shift())
+					_post_shift_selection();
+				else if (k->get_command() || k->get_control())
+					deselect();
+
+				_cancel_completion();
+				completion_hint = "";
+#endif
 			} break;
 			case KEY_X: {
 				if (readonly) {
@@ -4245,6 +4296,7 @@ void TextEdit::paste() {
 
 	String clipboard = OS::get_singleton()->get_clipboard();
 
+	begin_complex_operation();
 	if (selection.active) {
 
 		selection.active = false;
@@ -4261,6 +4313,8 @@ void TextEdit::paste() {
 	}
 
 	_insert_text_at_cursor(clipboard);
+	end_complex_operation();
+
 	update();
 }
 
@@ -5713,7 +5767,7 @@ void TextEdit::_bind_methods() {
 	ADD_GROUP("Caret", "caret_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "caret_block_mode"), "cursor_set_block_mode", "cursor_is_block_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "caret_blink"), "cursor_set_blink_enabled", "cursor_get_blink_enabled");
-	ADD_PROPERTYNZ(PropertyInfo(Variant::REAL, "caret_blink_speed", PROPERTY_HINT_RANGE, "0.1,10,0.1"), "cursor_set_blink_speed", "cursor_get_blink_speed");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::REAL, "caret_blink_speed", PROPERTY_HINT_RANGE, "0.1,10,0.01"), "cursor_set_blink_speed", "cursor_get_blink_speed");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "caret_moving_by_right_click"), "set_right_click_moves_caret", "is_right_click_moving_caret");
 
 	ADD_SIGNAL(MethodInfo("cursor_changed"));
@@ -5757,7 +5811,7 @@ TextEdit::TextEdit() {
 	indent_size = 4;
 	text.set_indent_size(indent_size);
 	text.clear();
-	//text.insert(1,"Mongolia..");
+	//text.insert(1,"Mongolia...");
 	//text.insert(2,"PAIS GENEROSO!!");
 	text.set_color_regions(&color_regions);
 

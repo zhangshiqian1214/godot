@@ -543,7 +543,6 @@ void AudioStreamPlayer3D::_notification(int p_what) {
 		//stop playing if no longer active
 		if (!active) {
 			set_physics_process_internal(false);
-			//do not update, this makes it easier to animate (will shut off otherwise)
 			//_change_notify("playing"); //update property in editor
 			emit_signal("finished");
 		}
@@ -552,7 +551,6 @@ void AudioStreamPlayer3D::_notification(int p_what) {
 
 void AudioStreamPlayer3D::set_stream(Ref<AudioStream> p_stream) {
 
-	ERR_FAIL_COND(!p_stream.is_valid());
 	AudioServer::get_singleton()->lock();
 
 	mix_buffer.resize(AudioServer::get_singleton()->thread_get_mix_buffer_size());
@@ -564,14 +562,15 @@ void AudioStreamPlayer3D::set_stream(Ref<AudioStream> p_stream) {
 		setseek = -1;
 	}
 
-	stream = p_stream;
-	stream_playback = p_stream->instance_playback();
+	if (p_stream.is_valid()) {
+		stream = p_stream;
+		stream_playback = p_stream->instance_playback();
+	}
 
 	AudioServer::get_singleton()->unlock();
 
-	if (stream_playback.is_null()) {
+	if (p_stream.is_valid() && stream_playback.is_null()) {
 		stream.unref();
-		ERR_FAIL_COND(stream_playback.is_null());
 	}
 }
 
@@ -641,6 +640,11 @@ void AudioStreamPlayer3D::stop() {
 
 bool AudioStreamPlayer3D::is_playing() const {
 
+#ifdef TOOLS_ENABLED
+	if (Engine::get_singleton()->is_editor_hint())
+		return fake_active;
+#endif
+
 	if (stream_playback.is_valid()) {
 		return active; // && stream_playback->is_playing();
 	}
@@ -685,11 +689,16 @@ bool AudioStreamPlayer3D::is_autoplay_enabled() {
 
 void AudioStreamPlayer3D::_set_playing(bool p_enable) {
 
+#ifdef TOOLS_ENABLED
+	fake_active = p_enable;
+#endif
+
 	if (p_enable)
 		play();
 	else
 		stop();
 }
+
 bool AudioStreamPlayer3D::_is_active() const {
 
 	return active;

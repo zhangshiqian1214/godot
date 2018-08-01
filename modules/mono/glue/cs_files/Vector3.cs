@@ -219,6 +219,11 @@ namespace Godot
             return 2.0f * n * Dot(n) - this;
         }
 
+        public Vector3 Round()
+        {
+            return new Vector3(Mathf.Round(x), Mathf.Round(y), Mathf.Round(z));
+        }
+
         public Vector3 Rotated(Vector3 axis, real_t phi)
         {
             return new Basis(axis, phi).Xform(this);
@@ -235,6 +240,12 @@ namespace Godot
             x = v.x;
             y = v.y;
             z = v.z;
+        }
+
+        public Vector3 Slerp(Vector3 b, real_t t)
+        {
+            real_t theta = AngleTo(b);
+            return Rotated(Cross(b), theta * t);
         }
 
         public Vector3 Slide(Vector3 n)

@@ -536,6 +536,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		} else if (I->get() == "--build-solutions") { // Build the scripting solution such C#
 
 			auto_build_solutions = true;
+			editor = true;
 #endif
 		} else if (I->get() == "--no-window") { // disable window creation, Windows only
 
@@ -726,6 +727,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			memdelete(sdr);
 		} else {
 			script_debugger = sdr;
+			sdr->set_allow_focus_steal_pid(allow_focus_steal_pid);
 		}
 	} else if (debug_mode == "local") {
 
@@ -891,6 +893,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	}
 
 	video_mode.use_vsync = GLOBAL_DEF("display/window/vsync/use_vsync", true);
+	OS::get_singleton()->_use_vsync = video_mode.use_vsync;
 
 	GLOBAL_DEF("rendering/quality/intended_usage/framebuffer_allocation", 2);
 	GLOBAL_DEF("rendering/quality/intended_usage/framebuffer_allocation.mobile", 3);
@@ -1157,13 +1160,16 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	GLOBAL_DEF("application/config/icon", String());
 	ProjectSettings::get_singleton()->set_custom_property_info("application/config/icon", PropertyInfo(Variant::STRING, "application/config/icon", PROPERTY_HINT_FILE, "*.png,*.webp"));
 
-	if (bool(GLOBAL_DEF("display/window/handheld/emulate_touchscreen", false))) {
-		if (!OS::get_singleton()->has_touchscreen_ui_hint() && Input::get_singleton() && !editor) {
-			//only if no touchscreen ui hint, set emulation
-			InputDefault *id = Object::cast_to<InputDefault>(Input::get_singleton());
-			if (id)
+	InputDefault *id = Object::cast_to<InputDefault>(Input::get_singleton());
+	if (id) {
+		if (bool(GLOBAL_DEF("display/window/handheld/emulate_touchscreen", false)) && !editor) {
+			if (!OS::get_singleton()->has_touchscreen_ui_hint()) {
+				//only if no touchscreen ui hint, set emulation
 				id->set_emulate_touch(true);
+			}
 		}
+
+		id->set_emulate_mouse_from_touch(bool(GLOBAL_DEF("display/window/handheld/emulate_mouse_from_touch", true)));
 	}
 
 	MAIN_PRINT("Main: Load Remaps");
@@ -1193,10 +1199,6 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	ClassDB::set_current_api(ClassDB::API_CORE);
 
 #endif
-
-	if (allow_focus_steal_pid) {
-		OS::get_singleton()->enable_for_stealing_focus(allow_focus_steal_pid);
-	}
 
 	MAIN_PRINT("Main: Load Modules, Physics, Drivers, Scripts");
 
@@ -1329,7 +1331,7 @@ bool Main::start() {
 		DocData docsrc;
 		Map<String, String> doc_data_classes;
 		Set<String> checked_paths;
-		print_line("Loading docs..");
+		print_line("Loading docs...");
 
 		for (int i = 0; i < _doc_data_class_path_count; i++) {
 			String path = doc_tool.plus_file(_doc_data_class_paths[i].path);
@@ -1347,14 +1349,14 @@ bool Main::start() {
 		checked_paths.insert(index_path);
 		print_line("Loading docs from: " + index_path);
 
-		print_line("Merging docs..");
+		print_line("Merging docs...");
 		doc.merge_from(docsrc);
 		for (Set<String>::Element *E = checked_paths.front(); E; E = E->next()) {
 			print_line("Erasing old docs at: " + E->get());
 			DocData::erase_classes(E->get());
 		}
 
-		print_line("Generating new docs..");
+		print_line("Generating new docs...");
 		doc.save_classes(index_path, doc_data_classes);
 
 		return false;
