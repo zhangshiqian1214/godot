@@ -40,7 +40,6 @@
 #include "viewport.h"
 
 VARIANT_ENUM_CAST(Node::PauseMode);
-VARIANT_ENUM_CAST(Node::RPCMode);
 
 void Node::_notification(int p_notification) {
 
@@ -176,6 +175,9 @@ void Node::_propagate_ready() {
 		data.children[i]->_propagate_ready();
 	}
 	data.blocked--;
+
+	notification(NOTIFICATION_POST_ENTER_TREE);
+
 	if (data.ready_first) {
 		data.ready_first = false;
 		notification(NOTIFICATION_READY);
@@ -477,23 +479,23 @@ bool Node::is_network_master() const {
 
 	ERR_FAIL_COND_V(!is_inside_tree(), false);
 
-	return get_multiplayer_api()->get_network_unique_id() == data.network_master;
+	return get_multiplayer()->get_network_unique_id() == data.network_master;
 }
 
 /***** RPC CONFIG ********/
 
-void Node::rpc_config(const StringName &p_method, RPCMode p_mode) {
+void Node::rpc_config(const StringName &p_method, MultiplayerAPI::RPCMode p_mode) {
 
-	if (p_mode == RPC_MODE_DISABLED) {
+	if (p_mode == MultiplayerAPI::RPC_MODE_DISABLED) {
 		data.rpc_methods.erase(p_method);
 	} else {
 		data.rpc_methods[p_method] = p_mode;
 	};
 }
 
-void Node::rset_config(const StringName &p_property, RPCMode p_mode) {
+void Node::rset_config(const StringName &p_property, MultiplayerAPI::RPCMode p_mode) {
 
-	if (p_mode == RPC_MODE_DISABLED) {
+	if (p_mode == MultiplayerAPI::RPC_MODE_DISABLED) {
 		data.rpc_properties.erase(p_property);
 	} else {
 		data.rpc_properties[p_property] = p_mode;
@@ -668,12 +670,12 @@ Variant Node::_rpc_unreliable_id_bind(const Variant **p_args, int p_argcount, Va
 
 void Node::rpcp(int p_peer_id, bool p_unreliable, const StringName &p_method, const Variant **p_arg, int p_argcount) {
 	ERR_FAIL_COND(!is_inside_tree());
-	get_multiplayer_api()->rpcp(this, p_peer_id, p_unreliable, p_method, p_arg, p_argcount);
+	get_multiplayer()->rpcp(this, p_peer_id, p_unreliable, p_method, p_arg, p_argcount);
 }
 
 void Node::rsetp(int p_peer_id, bool p_unreliable, const StringName &p_property, const Variant &p_value) {
 	ERR_FAIL_COND(!is_inside_tree());
-	get_multiplayer_api()->rsetp(this, p_peer_id, p_unreliable, p_property, p_value);
+	get_multiplayer()->rsetp(this, p_peer_id, p_unreliable, p_property, p_value);
 }
 
 /******** RSET *********/
@@ -698,136 +700,40 @@ void Node::rset_unreliable_id(int p_peer_id, const StringName &p_property, const
 }
 
 //////////// end of rpc
-Ref<MultiplayerAPI> Node::get_multiplayer_api() const {
-	if (multiplayer_api.is_valid())
-		return multiplayer_api;
+Ref<MultiplayerAPI> Node::get_multiplayer() const {
+	if (multiplayer.is_valid())
+		return multiplayer;
 	if (!is_inside_tree())
 		return Ref<MultiplayerAPI>();
-	return get_tree()->get_multiplayer_api();
+	return get_tree()->get_multiplayer();
 }
 
-Ref<MultiplayerAPI> Node::get_custom_multiplayer_api() const {
-	return multiplayer_api;
+Ref<MultiplayerAPI> Node::get_custom_multiplayer() const {
+	return multiplayer;
 }
 
-void Node::set_custom_multiplayer_api(Ref<MultiplayerAPI> p_multiplayer_api) {
+void Node::set_custom_multiplayer(Ref<MultiplayerAPI> p_multiplayer) {
 
-	multiplayer_api = p_multiplayer_api;
+	multiplayer = p_multiplayer;
 }
 
-const Map<StringName, Node::RPCMode>::Element *Node::get_node_rpc_mode(const StringName &p_method) {
+const Map<StringName, MultiplayerAPI::RPCMode>::Element *Node::get_node_rpc_mode(const StringName &p_method) {
 	return data.rpc_methods.find(p_method);
 }
 
-const Map<StringName, Node::RPCMode>::Element *Node::get_node_rset_mode(const StringName &p_property) {
+const Map<StringName, MultiplayerAPI::RPCMode>::Element *Node::get_node_rset_mode(const StringName &p_property) {
 	return data.rpc_properties.find(p_property);
 }
 
-bool Node::can_call_rpc(const StringName &p_method, int p_from) const {
-
-	const Map<StringName, RPCMode>::Element *E = data.rpc_methods.find(p_method);
-	if (E) {
-
-		switch (E->get()) {
-
-			case RPC_MODE_DISABLED: {
-				return false;
-			} break;
-			case RPC_MODE_REMOTE: {
-				return true;
-			} break;
-			case RPC_MODE_SYNC: {
-				return true;
-			} break;
-			case RPC_MODE_MASTER: {
-				return is_network_master();
-			} break;
-			case RPC_MODE_SLAVE: {
-				return !is_network_master() && p_from == get_network_master();
-			} break;
-		}
+bool Node::can_process_notification(int p_what) const {
+	switch (p_what) {
+		case NOTIFICATION_PHYSICS_PROCESS: return data.physics_process;
+		case NOTIFICATION_PROCESS: return data.idle_process;
+		case NOTIFICATION_INTERNAL_PROCESS: return data.idle_process_internal;
+		case NOTIFICATION_INTERNAL_PHYSICS_PROCESS: return data.physics_process_internal;
 	}
 
-	if (get_script_instance()) {
-		//attempt with script
-		ScriptInstance::RPCMode rpc_mode = get_script_instance()->get_rpc_mode(p_method);
-
-		switch (rpc_mode) {
-
-			case ScriptInstance::RPC_MODE_DISABLED: {
-				return false;
-			} break;
-			case ScriptInstance::RPC_MODE_REMOTE: {
-				return true;
-			} break;
-			case ScriptInstance::RPC_MODE_SYNC: {
-				return true;
-			} break;
-			case ScriptInstance::RPC_MODE_MASTER: {
-				return is_network_master();
-			} break;
-			case ScriptInstance::RPC_MODE_SLAVE: {
-				return !is_network_master() && p_from == get_network_master();
-			} break;
-		}
-	}
-
-	ERR_PRINTS("RPC from " + itos(p_from) + " on unauthorized method attempted: " + String(p_method) + " on base: " + String(Variant(this)));
-	return false;
-}
-
-bool Node::can_call_rset(const StringName &p_property, int p_from) const {
-
-	const Map<StringName, RPCMode>::Element *E = data.rpc_properties.find(p_property);
-	if (E) {
-
-		switch (E->get()) {
-
-			case RPC_MODE_DISABLED: {
-				return false;
-			} break;
-			case RPC_MODE_REMOTE: {
-				return true;
-			} break;
-			case RPC_MODE_SYNC: {
-				return true;
-			} break;
-			case RPC_MODE_MASTER: {
-				return is_network_master();
-			} break;
-			case RPC_MODE_SLAVE: {
-				return !is_network_master() && p_from == get_network_master();
-			} break;
-		}
-	}
-
-	if (get_script_instance()) {
-		//attempt with script
-		ScriptInstance::RPCMode rpc_mode = get_script_instance()->get_rset_mode(p_property);
-
-		switch (rpc_mode) {
-
-			case ScriptInstance::RPC_MODE_DISABLED: {
-				return false;
-			} break;
-			case ScriptInstance::RPC_MODE_REMOTE: {
-				return true;
-			} break;
-			case ScriptInstance::RPC_MODE_SYNC: {
-				return true;
-			} break;
-			case ScriptInstance::RPC_MODE_MASTER: {
-				return is_network_master();
-			} break;
-			case ScriptInstance::RPC_MODE_SLAVE: {
-				return !is_network_master() && p_from == get_network_master();
-			} break;
-		}
-	}
-
-	ERR_PRINTS("RSET from " + itos(p_from) + " on unauthorized property attempted: " + String(p_property) + " on base: " + String(Variant(this)));
-
-	return false;
+	return true;
 }
 
 bool Node::can_process() const {
@@ -912,6 +818,22 @@ void Node::set_process_internal(bool p_idle_process_internal) {
 bool Node::is_processing_internal() const {
 
 	return data.idle_process_internal;
+}
+
+void Node::set_process_priority(int p_priority) {
+	data.process_priority = p_priority;
+
+	if (is_processing())
+		data.tree->make_group_changed("idle_process");
+
+	if (is_processing_internal())
+		data.tree->make_group_changed("idle_process_internal");
+
+	if (is_physics_processing())
+		data.tree->make_group_changed("physics_process");
+
+	if (is_physics_processing_internal())
+		data.tree->make_group_changed("physics_process_internal");
 }
 
 void Node::set_process_input(bool p_enable) {
@@ -1200,6 +1122,10 @@ void Node::add_child(Node *p_child, bool p_legible_unique_name) {
 }
 
 void Node::add_child_below_node(Node *p_node, Node *p_child, bool p_legible_unique_name) {
+
+	ERR_FAIL_NULL(p_node);
+	ERR_FAIL_NULL(p_child);
+
 	add_child(p_child, p_legible_unique_name);
 
 	if (is_a_parent_of(p_node)) {
@@ -1487,6 +1413,11 @@ bool Node::is_greater_than(const Node *p_node) const {
 	}
 
 	return res;
+}
+
+bool Node::has_priority_higher_than(const Node *p_node) const {
+	ERR_FAIL_NULL_V(p_node, false);
+	return data.process_priority > p_node->data.process_priority;
 }
 
 void Node::get_owned_by(Node *p_by, List<Node *> *p_owned) {
@@ -1996,7 +1927,7 @@ Node *Node::_duplicate(int p_flags, Map<const Node *, Node *> *r_duplimap) const
 				// Skip nodes not really belonging to the instanced hierarchy; they'll be processed normally later
 				// but remember non-instanced nodes that are hidden below instanced ones
 				if (descendant->data.owner != this) {
-					if (descendant->get_parent() && descendant->get_parent() != this && descendant->get_parent()->data.owner == this)
+					if (descendant->get_parent() && descendant->get_parent() != this && descendant->get_parent()->data.owner == this && descendant->data.owner != descendant->get_parent())
 						hidden_roots.push_back(descendant);
 					continue;
 				}
@@ -2035,8 +1966,9 @@ Node *Node::_duplicate(int p_flags, Map<const Node *, Node *> *r_duplimap) const
 			if (E->get().usage & PROPERTY_USAGE_DO_NOT_SHARE_ON_DUPLICATE) {
 
 				Resource *res = Object::cast_to<Resource>(value);
-				if (res) // Duplicate only if it's a resource
+				if (res) { // Duplicate only if it's a resource
 					current_node->set(name, res->duplicate());
+				}
 
 			} else {
 
@@ -2708,6 +2640,7 @@ void Node::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_physics_processing"), &Node::is_physics_processing);
 	ClassDB::bind_method(D_METHOD("get_process_delta_time"), &Node::get_process_delta_time);
 	ClassDB::bind_method(D_METHOD("set_process", "enable"), &Node::set_process);
+	ClassDB::bind_method(D_METHOD("set_process_priority", "priority"), &Node::set_process_priority);
 	ClassDB::bind_method(D_METHOD("is_processing"), &Node::is_processing);
 	ClassDB::bind_method(D_METHOD("set_process_input", "enable"), &Node::set_process_input);
 	ClassDB::bind_method(D_METHOD("is_processing_input"), &Node::is_processing_input);
@@ -2748,9 +2681,9 @@ void Node::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("is_network_master"), &Node::is_network_master);
 
-	ClassDB::bind_method(D_METHOD("get_multiplayer_api"), &Node::get_multiplayer_api);
-	ClassDB::bind_method(D_METHOD("get_custom_multiplayer_api"), &Node::get_custom_multiplayer_api);
-	ClassDB::bind_method(D_METHOD("set_custom_multiplayer_api", "api"), &Node::set_custom_multiplayer_api);
+	ClassDB::bind_method(D_METHOD("get_multiplayer"), &Node::get_multiplayer);
+	ClassDB::bind_method(D_METHOD("get_custom_multiplayer"), &Node::get_custom_multiplayer);
+	ClassDB::bind_method(D_METHOD("set_custom_multiplayer", "api"), &Node::set_custom_multiplayer);
 	ClassDB::bind_method(D_METHOD("rpc_config", "method", "mode"), &Node::rpc_config);
 	ClassDB::bind_method(D_METHOD("rset_config", "property", "mode"), &Node::rset_config);
 
@@ -2799,12 +2732,6 @@ void Node::_bind_methods() {
 	BIND_CONSTANT(NOTIFICATION_INTERNAL_PROCESS);
 	BIND_CONSTANT(NOTIFICATION_INTERNAL_PHYSICS_PROCESS);
 
-	BIND_ENUM_CONSTANT(RPC_MODE_DISABLED);
-	BIND_ENUM_CONSTANT(RPC_MODE_REMOTE);
-	BIND_ENUM_CONSTANT(RPC_MODE_SYNC);
-	BIND_ENUM_CONSTANT(RPC_MODE_MASTER);
-	BIND_ENUM_CONSTANT(RPC_MODE_SLAVE);
-
 	BIND_ENUM_CONSTANT(PAUSE_MODE_INHERIT);
 	BIND_ENUM_CONSTANT(PAUSE_MODE_STOP);
 	BIND_ENUM_CONSTANT(PAUSE_MODE_PROCESS);
@@ -2830,8 +2757,8 @@ void Node::_bind_methods() {
 	ADD_PROPERTYNZ(PropertyInfo(Variant::STRING, "name", PROPERTY_HINT_NONE, "", 0), "set_name", "get_name");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::STRING, "filename", PROPERTY_HINT_NONE, "", 0), "set_filename", "get_filename");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::OBJECT, "owner", PROPERTY_HINT_RESOURCE_TYPE, "Node", 0), "set_owner", "get_owner");
-	ADD_PROPERTYNZ(PropertyInfo(Variant::OBJECT, "multiplayer_api", PROPERTY_HINT_RESOURCE_TYPE, "MultiplayerAPI", 0), "", "get_multiplayer_api");
-	ADD_PROPERTYNZ(PropertyInfo(Variant::OBJECT, "custom_multiplayer_api", PROPERTY_HINT_RESOURCE_TYPE, "MultiplayerAPI", 0), "set_custom_multiplayer_api", "get_custom_multiplayer_api");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::OBJECT, "multiplayer", PROPERTY_HINT_RESOURCE_TYPE, "MultiplayerAPI", 0), "", "get_multiplayer");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::OBJECT, "custom_multiplayer", PROPERTY_HINT_RESOURCE_TYPE, "MultiplayerAPI", 0), "set_custom_multiplayer", "get_custom_multiplayer");
 
 	BIND_VMETHOD(MethodInfo("_process", PropertyInfo(Variant::REAL, "delta")));
 	BIND_VMETHOD(MethodInfo("_physics_process", PropertyInfo(Variant::REAL, "delta")));
@@ -2865,6 +2792,7 @@ Node::Node() {
 	data.tree = NULL;
 	data.physics_process = false;
 	data.idle_process = false;
+	data.process_priority = 0;
 	data.physics_process_internal = false;
 	data.idle_process_internal = false;
 	data.inside_tree = false;

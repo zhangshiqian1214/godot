@@ -30,7 +30,6 @@
 
 #include "canvas_item_editor_plugin.h"
 
-#include "editor/animation_editor.h"
 #include "editor/editor_node.h"
 #include "editor/editor_settings.h"
 #include "editor/plugins/animation_player_editor_plugin.h"
@@ -365,7 +364,7 @@ Object *CanvasItemEditor::_get_editor_data(Object *p_what) {
 
 void CanvasItemEditor::_keying_changed() {
 
-	if (AnimationPlayerEditor::singleton->get_key_editor()->is_visible_in_tree())
+	if (AnimationPlayerEditor::singleton->get_track_editor()->is_visible_in_tree())
 		animation_hb->show();
 	else
 		animation_hb->hide();
@@ -520,14 +519,104 @@ void CanvasItemEditor::_get_canvas_items_at_pos(const Point2 &p_pos, Vector<_Sel
 			node = node->get_parent();
 		}
 
+		// Check if the canvas item is already in the list (for groups or scenes)
+		bool duplicate = false;
+		for (int j = 0; j < i; j++) {
+			if (r_items[j].item == canvas_item) {
+				duplicate = true;
+				break;
+			}
+		}
+
 		//Remove the item if invalid
-		if (!canvas_item || (canvas_item != scene && canvas_item->get_owner() != scene && !scene->is_editable_instance(canvas_item->get_owner())) || (canvas_item->has_meta("_edit_lock_") && canvas_item->get_meta("_edit_lock_"))) {
+		if (!canvas_item || duplicate || (canvas_item != scene && canvas_item->get_owner() != scene && !scene->is_editable_instance(canvas_item->get_owner())) || (canvas_item->has_meta("_edit_lock_") && canvas_item->get_meta("_edit_lock_"))) {
 			r_items.remove(i);
 			i--;
 		} else {
-			r_items[i].item = canvas_item;
+			r_items.write[i].item = canvas_item;
 		}
 	}
+}
+
+void CanvasItemEditor::_get_bones_at_pos(const Point2 &p_pos, Vector<_SelectResult> &r_items) {
+	Point2 screen_pos = transform.xform(p_pos);
+
+	for (Map<BoneKey, BoneList>::Element *E = bone_list.front(); E; E = E->next()) {
+		Node2D *from_node = Object::cast_to<Node2D>(ObjectDB::get_instance(E->key().from));
+
+		Vector<Vector2> bone_shape;
+		if (!_get_bone_shape(&bone_shape, NULL, E))
+			continue;
+
+		// Check if the point is inside the Polygon2D
+		if (Geometry::is_point_in_polygon(screen_pos, bone_shape)) {
+			// Check if the item is already in the list
+			bool duplicate = false;
+			for (int i = 0; i < r_items.size(); i++) {
+				if (r_items[i].item == from_node) {
+					duplicate = true;
+					break;
+				}
+			}
+			if (duplicate)
+				continue;
+
+			// Else, add it
+			_SelectResult res;
+			res.item = from_node;
+			res.z_index = from_node ? from_node->get_z_index() : 0;
+			res.has_z = from_node;
+			r_items.push_back(res);
+		}
+	}
+}
+
+bool CanvasItemEditor::_get_bone_shape(Vector<Vector2> *shape, Vector<Vector2> *outline_shape, Map<BoneKey, BoneList>::Element *bone) {
+	int bone_width = EditorSettings::get_singleton()->get("editors/2d/bone_width");
+	int bone_outline_width = EditorSettings::get_singleton()->get("editors/2d/bone_outline_size");
+
+	Node2D *from_node = Object::cast_to<Node2D>(ObjectDB::get_instance(bone->key().from));
+	Node2D *to_node = Object::cast_to<Node2D>(ObjectDB::get_instance(bone->key().to));
+
+	if (!from_node->is_inside_tree())
+		return false; //may have been removed
+	if (!from_node)
+		return false;
+
+	if (!to_node && bone->get().length == 0)
+		return false;
+
+	Vector2 from = transform.xform(from_node->get_global_position());
+	Vector2 to;
+
+	if (to_node)
+		to = transform.xform(to_node->get_global_position());
+	else
+		to = transform.xform(from_node->get_global_transform().xform(Vector2(bone->get().length, 0)));
+
+	Vector2 rel = to - from;
+	Vector2 relt = rel.tangent().normalized() * bone_width;
+	Vector2 reln = rel.normalized();
+	Vector2 reltn = relt.normalized();
+
+	if (shape) {
+		shape->clear();
+		shape->push_back(from);
+		shape->push_back(from + rel * 0.2 + relt);
+		shape->push_back(to);
+		shape->push_back(from + rel * 0.2 - relt);
+	}
+
+	if (outline_shape) {
+		outline_shape->clear();
+		outline_shape->push_back(from + (-reln - reltn) * bone_outline_width);
+		outline_shape->push_back(from + (-reln + reltn) * bone_outline_width);
+		outline_shape->push_back(from + rel * 0.2 + relt + reltn * bone_outline_width);
+		outline_shape->push_back(to + (reln + reltn) * bone_outline_width);
+		outline_shape->push_back(to + (reln - reltn) * bone_outline_width);
+		outline_shape->push_back(from + rel * 0.2 - relt - reltn * bone_outline_width);
+	}
+	return true;
 }
 
 void CanvasItemEditor::_find_canvas_items_in_rect(const Rect2 &p_rect, Node *p_node, List<CanvasItem *> *r_items, const Transform2D &p_parent_xform, const Transform2D &p_canvas_xform) {
@@ -629,16 +718,17 @@ Vector2 CanvasItemEditor::_anchor_to_position(const Control *p_control, Vector2 
 	ERR_FAIL_COND_V(!p_control, Vector2());
 
 	Transform2D parent_transform = p_control->get_transform().affine_inverse();
-	Size2 parent_size = p_control->get_parent_area_size();
+	Rect2 parent_rect = p_control->get_parent_anchorable_rect();
 
-	return parent_transform.xform(Vector2(parent_size.x * anchor.x, parent_size.y * anchor.y));
+	return parent_transform.xform(parent_rect.position + Vector2(parent_rect.size.x * anchor.x, parent_rect.size.y * anchor.y));
 }
 
 Vector2 CanvasItemEditor::_position_to_anchor(const Control *p_control, Vector2 position) {
 	ERR_FAIL_COND_V(!p_control, Vector2());
-	Size2 parent_size = p_control->get_parent_area_size();
 
-	return p_control->get_transform().xform(position) / parent_size;
+	Rect2 parent_rect = p_control->get_parent_anchorable_rect();
+
+	return (p_control->get_transform().xform(position) - parent_rect.position) / parent_rect.size;
 }
 
 void CanvasItemEditor::_save_canvas_item_state(List<CanvasItem *> p_canvas_items, bool save_bones) {
@@ -1787,7 +1877,12 @@ bool CanvasItemEditor::_gui_input_select(const Ref<InputEvent> &p_event) {
 			// Find the item to select
 			CanvasItem *canvas_item = NULL;
 			Vector<_SelectResult> selection;
+
+			// Retrieve the items
 			_get_canvas_items_at_pos(click, selection, editor_selection->get_selection().empty() ? 1 : 0);
+
+			// Retrieve the bones
+			_get_bones_at_pos(click, selection);
 
 			for (int i = 0; i < selection.size(); i++) {
 				if (editor_selection->is_selected(selection[i].item)) {
@@ -1888,32 +1983,53 @@ bool CanvasItemEditor::_gui_input_hover(const Ref<InputEvent> &p_event) {
 
 	Ref<InputEventMouseMotion> m = p_event;
 	if (m.is_valid()) {
-		if (drag_type == DRAG_NONE && tool == TOOL_SELECT) {
-			Point2 click = transform.affine_inverse().xform(m->get_position());
+		Point2 click = transform.affine_inverse().xform(m->get_position());
 
-			//Checks if the hovered items changed, update the viewport if so
-			Vector<_SelectResult> hovering_results_tmp;
-			_get_canvas_items_at_pos(click, hovering_results_tmp);
-			hovering_results_tmp.sort();
-			bool changed = false;
-			if (hovering_results.size() == hovering_results_tmp.size()) {
-				for (int i = 0; i < hovering_results.size(); i++) {
-					if (hovering_results[i].item != hovering_results_tmp[i].item) {
-						changed = true;
-						break;
-					}
-				}
-			} else {
-				changed = true;
-			}
+		// Checks if the hovered items changed, update the viewport if so
+		Vector<_SelectResult> hovering_results_items;
+		_get_canvas_items_at_pos(click, hovering_results_items);
+		hovering_results_items.sort();
 
-			if (changed) {
-				hovering_results = hovering_results_tmp;
-				viewport->update();
-			}
+		// Compute the nodes names and icon position
+		Vector<_HoverResult> hovering_results_tmp;
+		for (int i = 0; i < hovering_results_items.size(); i++) {
+			CanvasItem *canvas_item = hovering_results_items[i].item;
 
-			return true;
+			if (canvas_item->_edit_use_rect())
+				continue;
+
+			_HoverResult hover_result;
+			hover_result.position = canvas_item->get_global_transform_with_canvas().get_origin();
+			if (has_icon(canvas_item->get_class(), "EditorIcons"))
+				hover_result.icon = get_icon(canvas_item->get_class(), "EditorIcons");
+			else
+				hover_result.icon = get_icon("Object", "EditorIcons");
+			hover_result.name = canvas_item->get_name();
+
+			hovering_results_tmp.push_back(hover_result);
 		}
+
+		// Check if changed, if so, update.
+		bool changed = false;
+		if (hovering_results_tmp.size() == hovering_results.size()) {
+			for (int i = 0; i < hovering_results_tmp.size(); i++) {
+				_HoverResult a = hovering_results_tmp[i];
+				_HoverResult b = hovering_results[i];
+				if (a.icon != b.icon || a.name != b.name || a.position != b.position) {
+					changed = true;
+					break;
+				}
+			}
+		} else {
+			changed = true;
+		}
+
+		if (changed) {
+			hovering_results = hovering_results_tmp;
+			viewport->update();
+		}
+
+		return true;
 	}
 
 	return false;
@@ -2375,10 +2491,12 @@ void CanvasItemEditor::_draw_selection() {
 					Transform2D parent_transform = xform * control->get_transform().affine_inverse();
 					float node_pos_in_parent[4];
 
-					node_pos_in_parent[0] = control->get_anchor(MARGIN_LEFT) * control->get_parent_area_size().width + control->get_margin(MARGIN_LEFT);
-					node_pos_in_parent[1] = control->get_anchor(MARGIN_TOP) * control->get_parent_area_size().height + control->get_margin(MARGIN_TOP);
-					node_pos_in_parent[2] = control->get_anchor(MARGIN_RIGHT) * control->get_parent_area_size().width + control->get_margin(MARGIN_RIGHT);
-					node_pos_in_parent[3] = control->get_anchor(MARGIN_BOTTOM) * control->get_parent_area_size().height + control->get_margin(MARGIN_BOTTOM);
+					Rect2 parent_rect = control->get_parent_anchorable_rect();
+
+					node_pos_in_parent[0] = control->get_anchor(MARGIN_LEFT) * parent_rect.size.width + control->get_margin(MARGIN_LEFT) + parent_rect.position.x;
+					node_pos_in_parent[1] = control->get_anchor(MARGIN_TOP) * parent_rect.size.height + control->get_margin(MARGIN_TOP) + parent_rect.position.y;
+					node_pos_in_parent[2] = control->get_anchor(MARGIN_RIGHT) * parent_rect.size.width + control->get_margin(MARGIN_RIGHT) + parent_rect.position.x;
+					node_pos_in_parent[3] = control->get_anchor(MARGIN_BOTTOM) * parent_rect.size.height + control->get_margin(MARGIN_BOTTOM) + parent_rect.position.y;
 
 					Point2 start, end;
 					switch (drag_type) {
@@ -2579,57 +2697,25 @@ void CanvasItemEditor::_draw_bones() {
 	RID ci = viewport->get_canvas_item();
 
 	if (skeleton_show_bones) {
-		int bone_width = EditorSettings::get_singleton()->get("editors/2d/bone_width");
 		Color bone_color1 = EditorSettings::get_singleton()->get("editors/2d/bone_color1");
 		Color bone_color2 = EditorSettings::get_singleton()->get("editors/2d/bone_color2");
 		Color bone_ik_color = EditorSettings::get_singleton()->get("editors/2d/bone_ik_color");
 		Color bone_outline_color = EditorSettings::get_singleton()->get("editors/2d/bone_outline_color");
 		Color bone_selected_color = EditorSettings::get_singleton()->get("editors/2d/bone_selected_color");
-		int bone_outline_size = EditorSettings::get_singleton()->get("editors/2d/bone_outline_size");
 
 		for (Map<BoneKey, BoneList>::Element *E = bone_list.front(); E; E = E->next()) {
 
-			Node2D *from_node = Object::cast_to<Node2D>(ObjectDB::get_instance(E->key().from));
-			Node2D *to_node = Object::cast_to<Node2D>(ObjectDB::get_instance(E->key().to));
-
-			if (!from_node->is_inside_tree())
-				continue; //may have been removed
-			if (!from_node)
-				continue;
-
-			if (!to_node && E->get().length == 0)
-				continue;
-
-			Vector2 from = transform.xform(from_node->get_global_position());
-			Vector2 to;
-
-			if (to_node)
-				to = transform.xform(to_node->get_global_position());
-			else
-				to = transform.xform(from_node->get_global_transform().xform(Vector2(E->get().length, 0)));
-
-			Vector2 rel = to - from;
-			Vector2 relt = rel.tangent().normalized() * bone_width;
-			Vector2 reln = rel.normalized();
-			Vector2 reltn = relt.normalized();
-
 			Vector<Vector2> bone_shape;
-			bone_shape.push_back(from);
-			bone_shape.push_back(from + rel * 0.2 + relt);
-			bone_shape.push_back(to);
-			bone_shape.push_back(from + rel * 0.2 - relt);
-
 			Vector<Vector2> bone_shape_outline;
-			bone_shape_outline.push_back(from + (-reln - reltn) * bone_outline_size);
-			bone_shape_outline.push_back(from + (-reln + reltn) * bone_outline_size);
-			bone_shape_outline.push_back(from + rel * 0.2 + relt + reltn * bone_outline_size);
-			bone_shape_outline.push_back(to + (reln + reltn) * bone_outline_size);
-			bone_shape_outline.push_back(to + (reln - reltn) * bone_outline_size);
-			bone_shape_outline.push_back(from + rel * 0.2 - relt - reltn * bone_outline_size);
+			if (!_get_bone_shape(&bone_shape, &bone_shape_outline, E))
+				continue;
+
+			Node2D *from_node = Object::cast_to<Node2D>(ObjectDB::get_instance(E->key().from));
+			if (!from_node->is_visible_in_tree())
+				continue;
 
 			Vector<Color> colors;
 			if (from_node->has_meta("_edit_ik_")) {
-
 				colors.push_back(bone_ik_color);
 				colors.push_back(bone_ik_color);
 				colors.push_back(bone_ik_color);
@@ -2706,26 +2792,15 @@ void CanvasItemEditor::_draw_hover() {
 	List<Rect2> previous_rects;
 
 	for (int i = 0; i < hovering_results.size(); i++) {
-		// Draw the node's name and icon
-		CanvasItem *canvas_item = hovering_results[i].item;
 
-		if (canvas_item->_edit_use_rect())
-			continue;
+		Ref<Texture> node_icon = hovering_results[i].icon;
+		String node_name = hovering_results[i].name;
 
-		Transform2D xform = transform * canvas_item->get_global_transform_with_canvas();
-
-		// Get the resources
-		Ref<Texture> node_icon;
-		if (has_icon(canvas_item->get_class(), "EditorIcons"))
-			node_icon = get_icon(canvas_item->get_class(), "EditorIcons");
-		else
-			node_icon = get_icon("Object", "EditorIcons");
 		Ref<Font> font = get_font("font", "Label");
-		String node_name = canvas_item->get_name();
 		Size2 node_name_size = font->get_string_size(node_name);
 		Size2 item_size = Size2(node_icon->get_size().x + 4 + node_name_size.x, MAX(node_icon->get_size().y, node_name_size.y - 3));
 
-		Point2 pos = xform.get_origin() - Point2(0, item_size.y) + (Point2(node_icon->get_size().x, -node_icon->get_size().y) / 4);
+		Point2 pos = transform.xform(hovering_results[i].position) - Point2(0, item_size.y) + (Point2(node_icon->get_size().x, -node_icon->get_size().y) / 4);
 		// Rectify the position to avoid overlaping items
 		for (List<Rect2>::Element *E = previous_rects.front(); E; E = E->next()) {
 			if (E->get().intersects(Rect2(pos, item_size))) {
@@ -2735,8 +2810,10 @@ void CanvasItemEditor::_draw_hover() {
 
 		previous_rects.push_back(Rect2(pos, item_size));
 
-		// Draw the node icon and name
+		// Draw icon
 		viewport->draw_texture(node_icon, pos, Color(1.0, 1.0, 1.0, 0.5));
+
+		// Draw name
 		viewport->draw_string(font, pos + Point2(node_icon->get_size().x + 4, item_size.y - 3), node_name, Color(1.0, 1.0, 1.0, 0.5));
 	}
 }
@@ -3016,7 +3093,7 @@ void CanvasItemEditor::_notification(int p_what) {
 			select_sb->set_default_margin(Margin(i), 4);
 		}
 
-		AnimationPlayerEditor::singleton->get_key_editor()->connect("visibility_changed", this, "_keying_changed");
+		AnimationPlayerEditor::singleton->get_track_editor()->connect("visibility_changed", this, "_keying_changed");
 		_keying_changed();
 		get_tree()->connect("node_added", this, "_tree_changed", varray());
 		get_tree()->connect("node_removed", this, "_tree_changed", varray());
@@ -3628,11 +3705,11 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 					Node2D *n2d = Object::cast_to<Node2D>(canvas_item);
 
 					if (key_pos)
-						AnimationPlayerEditor::singleton->get_key_editor()->insert_node_value_key(n2d, "position", n2d->get_position(), existing);
+						AnimationPlayerEditor::singleton->get_track_editor()->insert_node_value_key(n2d, "position", n2d->get_position(), existing);
 					if (key_rot)
-						AnimationPlayerEditor::singleton->get_key_editor()->insert_node_value_key(n2d, "rotation_degrees", Math::rad2deg(n2d->get_rotation()), existing);
+						AnimationPlayerEditor::singleton->get_track_editor()->insert_node_value_key(n2d, "rotation_degrees", Math::rad2deg(n2d->get_rotation()), existing);
 					if (key_scale)
-						AnimationPlayerEditor::singleton->get_key_editor()->insert_node_value_key(n2d, "scale", n2d->get_scale(), existing);
+						AnimationPlayerEditor::singleton->get_track_editor()->insert_node_value_key(n2d, "scale", n2d->get_scale(), existing);
 
 					if (n2d->has_meta("_edit_bone_") && n2d->get_parent_item()) {
 						//look for an IK chain
@@ -3659,11 +3736,11 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 							for (List<Node2D *>::Element *F = ik_chain.front(); F; F = F->next()) {
 
 								if (key_pos)
-									AnimationPlayerEditor::singleton->get_key_editor()->insert_node_value_key(F->get(), "position", F->get()->get_position(), existing);
+									AnimationPlayerEditor::singleton->get_track_editor()->insert_node_value_key(F->get(), "position", F->get()->get_position(), existing);
 								if (key_rot)
-									AnimationPlayerEditor::singleton->get_key_editor()->insert_node_value_key(F->get(), "rotation_degrees", Math::rad2deg(F->get()->get_rotation()), existing);
+									AnimationPlayerEditor::singleton->get_track_editor()->insert_node_value_key(F->get(), "rotation_degrees", Math::rad2deg(F->get()->get_rotation()), existing);
 								if (key_scale)
-									AnimationPlayerEditor::singleton->get_key_editor()->insert_node_value_key(F->get(), "scale", F->get()->get_scale(), existing);
+									AnimationPlayerEditor::singleton->get_track_editor()->insert_node_value_key(F->get(), "scale", F->get()->get_scale(), existing);
 							}
 						}
 					}
@@ -3673,11 +3750,11 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 					Control *ctrl = Object::cast_to<Control>(canvas_item);
 
 					if (key_pos)
-						AnimationPlayerEditor::singleton->get_key_editor()->insert_node_value_key(ctrl, "rect_position", ctrl->get_position(), existing);
+						AnimationPlayerEditor::singleton->get_track_editor()->insert_node_value_key(ctrl, "rect_position", ctrl->get_position(), existing);
 					if (key_rot)
-						AnimationPlayerEditor::singleton->get_key_editor()->insert_node_value_key(ctrl, "rect_rotation", ctrl->get_rotation_degrees(), existing);
+						AnimationPlayerEditor::singleton->get_track_editor()->insert_node_value_key(ctrl, "rect_rotation", ctrl->get_rotation_degrees(), existing);
 					if (key_scale)
-						AnimationPlayerEditor::singleton->get_key_editor()->insert_node_value_key(ctrl, "rect_size", ctrl->get_size(), existing);
+						AnimationPlayerEditor::singleton->get_track_editor()->insert_node_value_key(ctrl, "rect_size", ctrl->get_size(), existing);
 				}
 			}
 
@@ -3773,7 +3850,7 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 						ctrl->set_position(Point2());
 					/*
                                    if (key_scale)
-                                   AnimationPlayerEditor::singleton->get_key_editor()->insert_node_value_key(ctrl,"rect/size",ctrl->get_size());
+				   AnimationPlayerEditor::singleton->get_track_editor()->insert_node_value_key(ctrl,"rect/size",ctrl->get_size());
                                    */
 				}
 			}
@@ -4275,13 +4352,13 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 	hb->add_child(snap_button);
 	snap_button->set_toggle_mode(true);
 	snap_button->connect("toggled", this, "_button_toggle_snap");
-	snap_button->set_tooltip(TTR("Toggles snapping"));
-	snap_button->set_shortcut(ED_SHORTCUT("canvas_item_editor/use_snap", TTR("Use Snap"), KEY_S));
+	snap_button->set_tooltip(TTR("Toggle snapping."));
+	snap_button->set_shortcut(ED_SHORTCUT("canvas_item_editor/use_snap", TTR("Use Snap"), KEY_MASK_SHIFT | KEY_S));
 
 	snap_config_menu = memnew(MenuButton);
 	hb->add_child(snap_config_menu);
 	snap_config_menu->set_h_size_flags(SIZE_SHRINK_END);
-	snap_config_menu->set_tooltip(TTR("Snapping options"));
+	snap_config_menu->set_tooltip(TTR("Snapping Options"));
 
 	PopupMenu *p = snap_config_menu->get_popup();
 	p->connect("id_pressed", this, "_popup_callback");
@@ -4404,7 +4481,7 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 	key_insert_button->set_flat(true);
 	key_insert_button->set_focus_mode(FOCUS_NONE);
 	key_insert_button->connect("pressed", this, "_popup_callback", varray(ANIM_INSERT_KEY));
-	key_insert_button->set_tooltip(TTR("Insert Keys"));
+	key_insert_button->set_tooltip(TTR("Insert keys."));
 	key_insert_button->set_shortcut(ED_SHORTCUT("canvas_item_editor/anim_insert_key", TTR("Insert Key"), KEY_INSERT));
 
 	animation_hb->add_child(key_insert_button);

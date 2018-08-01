@@ -643,7 +643,7 @@ static int frame_count = 0;
 	view_controller.view = glView;
 	window.rootViewController = view_controller;
 
-	_set_keep_screen_on(bool(GLOBAL_DEF("display/window/keep_screen_on", true)) ? YES : NO);
+	_set_keep_screen_on(bool(GLOBAL_DEF("display/window/energy_saving/keep_screen_on", true)) ? YES : NO);
 	glView.useCADisplayLink =
 			bool(GLOBAL_DEF("display.iOS/use_cadisplaylink", true)) ? YES : NO;
 	printf("cadisaplylink: %d", glView.useCADisplayLink);
@@ -709,21 +709,18 @@ static int frame_count = 0;
 	iphone_finish();
 };
 
-- (void)applicationDidEnterBackground:(UIApplication *)application {
-	///@TODO maybe add pause motionManager? and where would we unpause it?
+// When application goes to background (e.g. user switches to another app or presses Home),
+// then applicationWillResignActive -> applicationDidEnterBackground are called.
+// When user opens the inactive app again,
+// applicationWillEnterForeground -> applicationDidBecomeActive are called.
 
-	on_focus_out(view_controller, &is_focus_out);
-}
-
-- (void)applicationWillEnterForeground:(UIApplication *)application {
-	// OS::get_singleton()->get_main_loop()->notification(MainLoop::NOTIFICATION_WM_FOCUS_IN);
-	[view_controller.view startAnimation];
-}
+// There are cases when applicationWillResignActive -> applicationDidBecomeActive
+// sequence is called without the app going to background. For example, that happens
+// if you open the app list without switching to another app or open/close the
+// notification panel by swiping from the upper part of the screen.
 
 - (void)applicationWillResignActive:(UIApplication *)application {
-	// OS::get_singleton()->get_main_loop()->notification(MainLoop::NOTIFICATION_WM_FOCUS_OUT);
-	[view_controller.view
-					stopAnimation]; // FIXME: pause seems to be recommended elsewhere
+	on_focus_out(view_controller, &is_focus_out);
 }
 
 - (void)applicationDidBecomeActive:(UIApplication *)application {

@@ -37,38 +37,78 @@
 
 uint32_t Color::to_argb32() const {
 
-	uint32_t c = (uint8_t)(a * 255);
+	uint32_t c = (uint8_t)Math::round(a * 255);
 	c <<= 8;
-	c |= (uint8_t)(r * 255);
+	c |= (uint8_t)Math::round(r * 255);
 	c <<= 8;
-	c |= (uint8_t)(g * 255);
+	c |= (uint8_t)Math::round(g * 255);
 	c <<= 8;
-	c |= (uint8_t)(b * 255);
+	c |= (uint8_t)Math::round(b * 255);
 
 	return c;
 }
 
 uint32_t Color::to_abgr32() const {
-	uint32_t c = (uint8_t)(a * 255);
+
+	uint32_t c = (uint8_t)Math::round(a * 255);
 	c <<= 8;
-	c |= (uint8_t)(b * 255);
+	c |= (uint8_t)Math::round(b * 255);
 	c <<= 8;
-	c |= (uint8_t)(g * 255);
+	c |= (uint8_t)Math::round(g * 255);
 	c <<= 8;
-	c |= (uint8_t)(r * 255);
+	c |= (uint8_t)Math::round(r * 255);
 
 	return c;
 }
 
 uint32_t Color::to_rgba32() const {
 
-	uint32_t c = (uint8_t)(r * 255);
+	uint32_t c = (uint8_t)Math::round(r * 255);
 	c <<= 8;
-	c |= (uint8_t)(g * 255);
+	c |= (uint8_t)Math::round(g * 255);
 	c <<= 8;
-	c |= (uint8_t)(b * 255);
+	c |= (uint8_t)Math::round(b * 255);
 	c <<= 8;
-	c |= (uint8_t)(a * 255);
+	c |= (uint8_t)Math::round(a * 255);
+
+	return c;
+}
+
+uint64_t Color::to_abgr64() const {
+
+	uint64_t c = (uint16_t)Math::round(a * 65535);
+	c <<= 16;
+	c |= (uint16_t)Math::round(b * 65535);
+	c <<= 16;
+	c |= (uint16_t)Math::round(g * 65535);
+	c <<= 16;
+	c |= (uint16_t)Math::round(r * 65535);
+
+	return c;
+}
+
+uint64_t Color::to_argb64() const {
+
+	uint64_t c = (uint16_t)Math::round(a * 65535);
+	c <<= 16;
+	c |= (uint16_t)Math::round(r * 65535);
+	c <<= 16;
+	c |= (uint16_t)Math::round(g * 65535);
+	c <<= 16;
+	c |= (uint16_t)Math::round(b * 65535);
+
+	return c;
+}
+
+uint64_t Color::to_rgba64() const {
+
+	uint64_t c = (uint16_t)Math::round(r * 65535);
+	c <<= 16;
+	c |= (uint16_t)Math::round(g * 65535);
+	c <<= 16;
+	c |= (uint16_t)Math::round(b * 65535);
+	c <<= 16;
+	c |= (uint16_t)Math::round(a * 65535);
 
 	return c;
 }
@@ -196,6 +236,19 @@ Color Color::hex(uint32_t p_hex) {
 	float g = (p_hex & 0xFF) / 255.0;
 	p_hex >>= 8;
 	float r = (p_hex & 0xFF) / 255.0;
+
+	return Color(r, g, b, a);
+}
+
+Color Color::hex64(uint64_t p_hex) {
+
+	float a = (p_hex & 0xFFFF) / 65535.0;
+	p_hex >>= 16;
+	float b = (p_hex & 0xFFFF) / 65535.0;
+	p_hex >>= 16;
+	float g = (p_hex & 0xFFFF) / 65535.0;
+	p_hex >>= 16;
+	float r = (p_hex & 0xFFFF) / 65535.0;
 
 	return Color(r, g, b, a);
 }
@@ -368,7 +421,7 @@ Color Color::named(const String &p_name) {
 
 String _to_hex(float p_val) {
 
-	int v = p_val * 255;
+	int v = Math::round(p_val * 255);
 	v = CLAMP(v, 0, 255);
 	String ret;
 

@@ -47,6 +47,8 @@ class Dictionary {
 
 public:
 	void get_key_list(List<Variant> *p_keys) const;
+	Variant get_key_at_index(int p_index) const;
+	Variant get_value_at_index(int p_index) const;
 
 	Variant &operator[](const Variant &p_key);
 	const Variant &operator[](const Variant &p_key) const;
@@ -64,6 +66,7 @@ public:
 	bool has_all(const Array &p_keys) const;
 
 	void erase(const Variant &p_key);
+	bool erase_checked(const Variant &p_key);
 
 	bool operator==(const Dictionary &p_dictionary) const;
 

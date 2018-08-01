@@ -82,6 +82,8 @@
 #include "version.h"
 #include "version_hash.gen.h"
 
+#include "main/timer_sync.h"
+
 static ProjectSettings *globals = NULL;
 static Engine *engine = NULL;
 static InputMap *input_map = NULL;
@@ -261,9 +263,10 @@ void Main::print_help(const char *p_binary) {
 
 	OS::get_singleton()->print("Standalone tools:\n");
 	OS::get_singleton()->print("  -s, --script <script>            Run a script.\n");
+	OS::get_singleton()->print("  --check-only                     Only parse for errors and quit (use with --script).\n");
 #ifdef TOOLS_ENABLED
-	OS::get_singleton()->print("  --export <target>                Export the project using the given export target.\n");
-	OS::get_singleton()->print("  --export-debug                   Use together with --export, enables debug mode for the template.\n");
+	OS::get_singleton()->print("  --export <target>                Export the project using the given export target. Export only main pack if path ends with .pck or .zip.\n");
+	OS::get_singleton()->print("  --export-debug <target>          Like --export, but use debug template.\n");
 	OS::get_singleton()->print("  --doctool <path>                 Dump the engine API reference to the given <path> in XML format, merging if existing files are found.\n");
 	OS::get_singleton()->print("  --no-docbase                     Disallow dumping the base types (used with --doctool).\n");
 	OS::get_singleton()->print("  --build-solutions                Build the scripting solutions (e.g. for C# projects).\n");
@@ -337,7 +340,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	String video_driver = "";
 	String audio_driver = "";
-	String game_path = ".";
+	String project_path = ".";
 	bool upwards = false;
 	String debug_mode;
 	String debug_host;
@@ -536,6 +539,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		} else if (I->get() == "--build-solutions") { // Build the scripting solution such C#
 
 			auto_build_solutions = true;
+			editor = true;
 #endif
 		} else if (I->get() == "--no-window") { // disable window creation, Windows only
 
@@ -553,7 +557,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 				if (OS::get_singleton()->set_cwd(p) == OK) {
 					//nothing
 				} else {
-					game_path = I->next()->get(); //use game_path instead
+					project_path = I->next()->get(); //use project_path instead
 				}
 				N = I->next()->next();
 			} else {
@@ -576,7 +580,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			if (OS::get_singleton()->set_cwd(path) == OK) {
 				// path already specified, don't override
 			} else {
-				game_path = path;
+				project_path = path;
 			}
 #ifdef TOOLS_ENABLED
 			editor = true;
@@ -672,35 +676,20 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		} else if (I->get() == "--disable-crash-handler") {
 			OS::get_singleton()->disable_crash_handler();
 		} else {
-
-			//test for game path
-			bool gpfound = false;
-
-			if (!I->get().begins_with("-") && game_path == "") {
-				DirAccess *da = DirAccess::open(I->get());
-				if (da != NULL) {
-					game_path = I->get();
-					gpfound = true;
-					memdelete(da);
-				}
-			}
-
-			if (!gpfound) {
-				main_args.push_back(I->get());
-			}
+			main_args.push_back(I->get());
 		}
 
 		I = N;
 	}
 
-	if (globals->setup(game_path, main_pack, upwards) == OK) {
+	if (globals->setup(project_path, main_pack, upwards) == OK) {
 		found_project = true;
 	} else {
 
 #ifdef TOOLS_ENABLED
 		editor = false;
 #else
-		OS::get_singleton()->print("Error: Could not load game path '%s'.\n", game_path.ascii().get_data());
+		OS::get_singleton()->print("Error: Could not load game path '%s'.\n", project_path.ascii().get_data());
 
 		goto error;
 #endif
@@ -726,6 +715,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			memdelete(sdr);
 		} else {
 			script_debugger = sdr;
+			sdr->set_allow_focus_steal_pid(allow_focus_steal_pid);
 		}
 	} else if (debug_mode == "local") {
 
@@ -835,7 +825,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	OS::get_singleton()->set_cmdline(execpath, main_args);
 
 	GLOBAL_DEF("rendering/quality/driver/driver_name", "GLES3");
-	ProjectSettings::get_singleton()->set_custom_property_info("rendering/quality/driver/driver_name", PropertyInfo(Variant::STRING, "rendering/quality/driver/driver_name", PROPERTY_HINT_ENUM, "GLES3,GLES2"));
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/quality/driver/driver_name", PropertyInfo(Variant::STRING, "rendering/quality/driver/driver_name", PROPERTY_HINT_ENUM, "GLES2,GLES3"));
 	if (video_driver == "") {
 		video_driver = GLOBAL_GET("rendering/quality/driver/driver_name");
 	}
@@ -875,7 +865,13 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		OS::get_singleton()->_allow_hidpi = GLOBAL_DEF("display/window/dpi/allow_hidpi", false);
 	}
 
+	OS::get_singleton()->_allow_layered = GLOBAL_DEF("display/window/allow_per_pixel_transparency", false);
+
 	video_mode.use_vsync = GLOBAL_DEF("display/window/vsync/use_vsync", true);
+	OS::get_singleton()->_use_vsync = video_mode.use_vsync;
+
+	video_mode.layered = GLOBAL_DEF("display/window/per_pixel_transparency", false);
+	video_mode.layered_splash = GLOBAL_DEF("display/window/per_pixel_transparency_splash", false);
 
 	GLOBAL_DEF("rendering/quality/intended_usage/framebuffer_allocation", 2);
 	GLOBAL_DEF("rendering/quality/intended_usage/framebuffer_allocation.mobile", 3);
@@ -883,6 +879,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	if (editor || project_manager) {
 		// The editor and project manager always detect and use hiDPI if needed
 		OS::get_singleton()->_allow_hidpi = true;
+		OS::get_singleton()->_allow_layered = false;
 	}
 
 	Engine::get_singleton()->_pixel_snap = GLOBAL_DEF("rendering/quality/2d/use_pixel_snap", false);
@@ -917,7 +914,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	}
 
 	if (audio_driver == "") { // specified in project.godot
-		audio_driver = GLOBAL_DEF("audio/driver", OS::get_singleton()->get_audio_driver_name(0));
+		audio_driver = GLOBAL_DEF_RST("audio/driver", OS::get_singleton()->get_audio_driver_name(0));
 	}
 
 	for (int i = 0; i < OS::get_singleton()->get_audio_driver_count(); i++) {
@@ -986,7 +983,7 @@ error:
 
 	video_driver = "";
 	audio_driver = "";
-	game_path = "";
+	project_path = "";
 
 	args.clear();
 	main_args.clear();
@@ -1145,14 +1142,14 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 
 	InputDefault *id = Object::cast_to<InputDefault>(Input::get_singleton());
 	if (id) {
-		if (bool(GLOBAL_DEF("input/pointing_devices/emulate_touch_from_mouse", false)) && !(editor || project_manager)) {
+		if (bool(GLOBAL_DEF("input_devices/pointing/emulate_touch_from_mouse", false)) && !(editor || project_manager)) {
 			if (!OS::get_singleton()->has_touchscreen_ui_hint()) {
 				//only if no touchscreen ui hint, set emulation
 				id->set_emulate_touch_from_mouse(true);
 			}
 		}
 
-		id->set_emulate_mouse_from_touch(bool(GLOBAL_DEF("input/pointing_devices/emulate_mouse_from_touch", true)));
+		id->set_emulate_mouse_from_touch(bool(GLOBAL_DEF("input_devices/pointing/emulate_mouse_from_touch", true)));
 	}
 
 	MAIN_PRINT("Main: Load Remaps");
@@ -1182,10 +1179,6 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	ClassDB::set_current_api(ClassDB::API_CORE);
 
 #endif
-
-	if (allow_focus_steal_pid) {
-		OS::get_singleton()->enable_for_stealing_focus(allow_focus_steal_pid);
-	}
 
 	MAIN_PRINT("Main: Load Modules, Physics, Drivers, Scripts");
 
@@ -1231,227 +1224,8 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 }
 
 // everything the main loop needs to know about frame timings
-struct _FrameTime {
-	float animation_step; // time to advance animations for (argument to process())
-	int physics_steps; // number of times to iterate the physics engine
 
-	void clamp_animation(float min_animation_step, float max_animation_step) {
-		if (animation_step < min_animation_step) {
-			animation_step = min_animation_step;
-		} else if (animation_step > max_animation_step) {
-			animation_step = max_animation_step;
-		}
-	}
-};
-
-class _TimerSync {
-	// wall clock time measured on the main thread
-	uint64_t last_cpu_ticks_usec;
-	uint64_t current_cpu_ticks_usec;
-
-	// logical game time since last physics timestep
-	float time_accum;
-
-	// current difference between wall clock time and reported sum of animation_steps
-	float time_deficit;
-
-	// number of frames back for keeping accumulated physics steps roughly constant.
-	// value of 12 chosen because that is what is required to make 144 Hz monitors
-	// behave well with 60 Hz physics updates. The only worse commonly available refresh
-	// would be 85, requiring CONTROL_STEPS = 17.
-	static const int CONTROL_STEPS = 12;
-
-	// sum of physics steps done over the last (i+1) frames
-	int accumulated_physics_steps[CONTROL_STEPS];
-
-	// typical value for accumulated_physics_steps[i] is either this or this plus one
-	int typical_physics_steps[CONTROL_STEPS];
-
-protected:
-	// returns the fraction of p_frame_slice required for the timer to overshoot
-	// before advance_core considers changing the physics_steps return from
-	// the typical values as defined by typical_physics_steps
-	float get_physics_jitter_fix() {
-		return Engine::get_singleton()->get_physics_jitter_fix();
-	}
-
-	// gets our best bet for the average number of physics steps per render frame
-	// return value: number of frames back this data is consistent
-	int get_average_physics_steps(float &p_min, float &p_max) {
-		p_min = typical_physics_steps[0];
-		p_max = p_min + 1;
-
-		for (int i = 1; i < CONTROL_STEPS; ++i) {
-			const float typical_lower = typical_physics_steps[i];
-			const float current_min = typical_lower / (i + 1);
-			if (current_min > p_max)
-				return i; // bail out of further restrictions would void the interval
-			else if (current_min > p_min)
-				p_min = current_min;
-			const float current_max = (typical_lower + 1) / (i + 1);
-			if (current_max < p_min)
-				return i;
-			else if (current_max < p_max)
-				p_max = current_max;
-		}
-
-		return CONTROL_STEPS;
-	}
-
-	// advance physics clock by p_animation_step, return appropriate number of steps to simulate
-	_FrameTime advance_core(float p_frame_slice, int p_iterations_per_second, float p_animation_step) {
-		_FrameTime ret;
-
-		ret.animation_step = p_animation_step;
-
-		// simple determination of number of physics iteration
-		time_accum += ret.animation_step;
-		ret.physics_steps = floor(time_accum * p_iterations_per_second);
-
-		int min_typical_steps = typical_physics_steps[0];
-		int max_typical_steps = min_typical_steps + 1;
-
-		// given the past recorded steps and typcial steps to match, calculate bounds for this
-		// step to be typical
-		bool update_typical = false;
-
-		for (int i = 0; i < CONTROL_STEPS - 1; ++i) {
-			int steps_left_to_match_typical = typical_physics_steps[i + 1] - accumulated_physics_steps[i];
-			if (steps_left_to_match_typical > max_typical_steps ||
-					steps_left_to_match_typical + 1 < min_typical_steps) {
-				update_typical = true;
-				break;
-			}
-
-			if (steps_left_to_match_typical > min_typical_steps)
-				min_typical_steps = steps_left_to_match_typical;
-			if (steps_left_to_match_typical + 1 < max_typical_steps)
-				max_typical_steps = steps_left_to_match_typical + 1;
-		}
-
-		// try to keep it consistent with previous iterations
-		if (ret.physics_steps < min_typical_steps) {
-			const int max_possible_steps = floor((time_accum)*p_iterations_per_second + get_physics_jitter_fix());
-			if (max_possible_steps < min_typical_steps) {
-				ret.physics_steps = max_possible_steps;
-				update_typical = true;
-			} else {
-				ret.physics_steps = min_typical_steps;
-			}
-		} else if (ret.physics_steps > max_typical_steps) {
-			const int min_possible_steps = floor((time_accum)*p_iterations_per_second - get_physics_jitter_fix());
-			if (min_possible_steps > max_typical_steps) {
-				ret.physics_steps = min_possible_steps;
-				update_typical = true;
-			} else {
-				ret.physics_steps = max_typical_steps;
-			}
-		}
-
-		time_accum -= ret.physics_steps * p_frame_slice;
-
-		// keep track of accumulated step counts
-		for (int i = CONTROL_STEPS - 2; i >= 0; --i) {
-			accumulated_physics_steps[i + 1] = accumulated_physics_steps[i] + ret.physics_steps;
-		}
-		accumulated_physics_steps[0] = ret.physics_steps;
-
-		if (update_typical) {
-			for (int i = CONTROL_STEPS - 1; i >= 0; --i) {
-				if (typical_physics_steps[i] > accumulated_physics_steps[i]) {
-					typical_physics_steps[i] = accumulated_physics_steps[i];
-				} else if (typical_physics_steps[i] < accumulated_physics_steps[i] - 1) {
-					typical_physics_steps[i] = accumulated_physics_steps[i] - 1;
-				}
-			}
-		}
-
-		return ret;
-	}
-
-	// calls advance_core, keeps track of deficit it adds to animaption_step, make sure the deficit sum stays close to zero
-	_FrameTime advance_checked(float p_frame_slice, int p_iterations_per_second, float p_animation_step) {
-		if (fixed_fps != -1)
-			p_animation_step = 1.0 / fixed_fps;
-
-		// compensate for last deficit
-		p_animation_step += time_deficit;
-
-		_FrameTime ret = advance_core(p_frame_slice, p_iterations_per_second, p_animation_step);
-
-		// we will do some clamping on ret.animation_step and need to sync those changes to time_accum,
-		// that's easiest if we just remember their fixed difference now
-		const double animation_minus_accum = ret.animation_step - time_accum;
-
-		// first, least important clamping: keep ret.animation_step consistent with typical_physics_steps.
-		// this smoothes out the animation steps and culls small but quick variations.
-		{
-			float min_average_physics_steps, max_average_physics_steps;
-			int consistent_steps = get_average_physics_steps(min_average_physics_steps, max_average_physics_steps);
-			if (consistent_steps > 3) {
-				ret.clamp_animation(min_average_physics_steps * p_frame_slice, max_average_physics_steps * p_frame_slice);
-			}
-		}
-
-		// second clamping: keep abs(time_deficit) < jitter_fix * frame_slise
-		float max_clock_deviation = get_physics_jitter_fix() * p_frame_slice;
-		ret.clamp_animation(p_animation_step - max_clock_deviation, p_animation_step + max_clock_deviation);
-
-		// last clamping: make sure time_accum is between 0 and p_frame_slice for consistency between physics and animation
-		ret.clamp_animation(animation_minus_accum, animation_minus_accum + p_frame_slice);
-
-		// restore time_accum
-		time_accum = ret.animation_step - animation_minus_accum;
-
-		// track deficit
-		time_deficit = p_animation_step - ret.animation_step;
-
-		return ret;
-	}
-
-	// determine wall clock step since last iteration
-	float get_cpu_animation_step() {
-		uint64_t cpu_ticks_elapsed = current_cpu_ticks_usec - last_cpu_ticks_usec;
-		last_cpu_ticks_usec = current_cpu_ticks_usec;
-
-		return cpu_ticks_elapsed / 1000000.0;
-	}
-
-public:
-	explicit _TimerSync() :
-			last_cpu_ticks_usec(0),
-			current_cpu_ticks_usec(0),
-			time_accum(0),
-			time_deficit(0) {
-		for (int i = CONTROL_STEPS - 1; i >= 0; --i) {
-			typical_physics_steps[i] = i;
-			accumulated_physics_steps[i] = i;
-		}
-	}
-
-	// start the clock
-	void init(uint64_t p_cpu_ticks_usec) {
-		current_cpu_ticks_usec = last_cpu_ticks_usec = p_cpu_ticks_usec;
-	}
-
-	// set measured wall clock time
-	void set_cpu_ticks_usec(uint64_t p_cpu_ticks_usec) {
-		current_cpu_ticks_usec = p_cpu_ticks_usec;
-	}
-
-	// advance one frame, return timesteps to take
-	_FrameTime advance(float p_frame_slice, int p_iterations_per_second) {
-		float cpu_animation_step = get_cpu_animation_step();
-
-		return advance_checked(p_frame_slice, p_iterations_per_second, cpu_animation_step);
-	}
-
-	void before_start_render() {
-		VisualServer::get_singleton()->sync();
-	}
-};
-
-static _TimerSync _timer_sync;
+static MainTimerSync main_timer_sync;
 
 bool Main::start() {
 
@@ -1466,8 +1240,9 @@ bool Main::start() {
 	String test;
 	String _export_preset;
 	bool export_debug = false;
+	bool check_only = false;
 
-	_timer_sync.init(OS::get_singleton()->get_ticks_usec());
+	main_timer_sync.init(OS::get_singleton()->get_ticks_usec());
 
 	List<String> args = OS::get_singleton()->get_cmdline_args();
 	for (int i = 0; i < args.size(); i++) {
@@ -1482,6 +1257,8 @@ bool Main::start() {
 #endif
 		} else if (args[i].length() && args[i][0] != '-' && game_path == "") {
 			game_path = args[i];
+		} else if (args[i] == "--check-only") {
+			check_only = true;
 		}
 		//parameters that have an argument to the right
 		else if (i < (args.size() - 1)) {
@@ -1610,6 +1387,10 @@ bool Main::start() {
 		ERR_EXPLAIN("Can't load script: " + script);
 		ERR_FAIL_COND_V(script_res.is_null(), false);
 
+		if (check_only) {
+			return false;
+		}
+
 		if (script_res->can_instance() /*&& script_res->inherits_from("SceneTreeScripted")*/) {
 
 			StringName instance_type = script_res->get_instance_base_type();
@@ -1671,6 +1452,91 @@ bool Main::start() {
 		}
 #endif
 
+		if (!project_manager && !editor) { // game
+			if (game_path != "" || script != "") {
+				//autoload
+				List<PropertyInfo> props;
+				ProjectSettings::get_singleton()->get_property_list(&props);
+
+				//first pass, add the constants so they exist before any script is loaded
+				for (List<PropertyInfo>::Element *E = props.front(); E; E = E->next()) {
+
+					String s = E->get().name;
+					if (!s.begins_with("autoload/"))
+						continue;
+					String name = s.get_slicec('/', 1);
+					String path = ProjectSettings::get_singleton()->get(s);
+					bool global_var = false;
+					if (path.begins_with("*")) {
+						global_var = true;
+					}
+
+					if (global_var) {
+						for (int i = 0; i < ScriptServer::get_language_count(); i++) {
+							ScriptServer::get_language(i)->add_global_constant(name, Variant());
+						}
+					}
+				}
+
+				//second pass, load into global constants
+				List<Node *> to_add;
+				for (List<PropertyInfo>::Element *E = props.front(); E; E = E->next()) {
+
+					String s = E->get().name;
+					if (!s.begins_with("autoload/"))
+						continue;
+					String name = s.get_slicec('/', 1);
+					String path = ProjectSettings::get_singleton()->get(s);
+					bool global_var = false;
+					if (path.begins_with("*")) {
+						global_var = true;
+						path = path.substr(1, path.length() - 1);
+					}
+
+					RES res = ResourceLoader::load(path);
+					ERR_EXPLAIN("Can't autoload: " + path);
+					ERR_CONTINUE(res.is_null());
+					Node *n = NULL;
+					if (res->is_class("PackedScene")) {
+						Ref<PackedScene> ps = res;
+						n = ps->instance();
+					} else if (res->is_class("Script")) {
+						Ref<Script> s = res;
+						StringName ibt = s->get_instance_base_type();
+						bool valid_type = ClassDB::is_parent_class(ibt, "Node");
+						ERR_EXPLAIN("Script does not inherit a Node: " + path);
+						ERR_CONTINUE(!valid_type);
+
+						Object *obj = ClassDB::instance(ibt);
+
+						ERR_EXPLAIN("Cannot instance script for autoload, expected 'Node' inheritance, got: " + String(ibt));
+						ERR_CONTINUE(obj == NULL);
+
+						n = Object::cast_to<Node>(obj);
+						n->set_script(s.get_ref_ptr());
+					}
+
+					ERR_EXPLAIN("Path in autoload not a node or script: " + path);
+					ERR_CONTINUE(!n);
+					n->set_name(name);
+
+					//defer so references are all valid on _ready()
+					to_add.push_back(n);
+
+					if (global_var) {
+						for (int i = 0; i < ScriptServer::get_language_count(); i++) {
+							ScriptServer::get_language(i)->add_global_constant(name, n);
+						}
+					}
+				}
+
+				for (List<Node *>::Element *E = to_add.front(); E; E = E->next()) {
+
+					sml->get_root()->add_child(E->get());
+				}
+			}
+		}
+
 #ifdef TOOLS_ENABLED
 
 		EditorNode *editor_node = NULL;
@@ -1689,9 +1555,6 @@ bool Main::start() {
 			}
 		}
 #endif
-
-		{
-		}
 
 		if (!editor && !project_manager) {
 			//standard helpers that can be changed from main config
@@ -1805,89 +1668,6 @@ bool Main::start() {
 		}
 
 		if (!project_manager && !editor) { // game
-			if (game_path != "" || script != "") {
-				//autoload
-				List<PropertyInfo> props;
-				ProjectSettings::get_singleton()->get_property_list(&props);
-
-				//first pass, add the constants so they exist before any script is loaded
-				for (List<PropertyInfo>::Element *E = props.front(); E; E = E->next()) {
-
-					String s = E->get().name;
-					if (!s.begins_with("autoload/"))
-						continue;
-					String name = s.get_slicec('/', 1);
-					String path = ProjectSettings::get_singleton()->get(s);
-					bool global_var = false;
-					if (path.begins_with("*")) {
-						global_var = true;
-					}
-
-					if (global_var) {
-						for (int i = 0; i < ScriptServer::get_language_count(); i++) {
-							ScriptServer::get_language(i)->add_global_constant(name, Variant());
-						}
-					}
-				}
-
-				//second pass, load into global constants
-				List<Node *> to_add;
-				for (List<PropertyInfo>::Element *E = props.front(); E; E = E->next()) {
-
-					String s = E->get().name;
-					if (!s.begins_with("autoload/"))
-						continue;
-					String name = s.get_slicec('/', 1);
-					String path = ProjectSettings::get_singleton()->get(s);
-					bool global_var = false;
-					if (path.begins_with("*")) {
-						global_var = true;
-						path = path.substr(1, path.length() - 1);
-					}
-
-					RES res = ResourceLoader::load(path);
-					ERR_EXPLAIN("Can't autoload: " + path);
-					ERR_CONTINUE(res.is_null());
-					Node *n = NULL;
-					if (res->is_class("PackedScene")) {
-						Ref<PackedScene> ps = res;
-						n = ps->instance();
-					} else if (res->is_class("Script")) {
-						Ref<Script> s = res;
-						StringName ibt = s->get_instance_base_type();
-						bool valid_type = ClassDB::is_parent_class(ibt, "Node");
-						ERR_EXPLAIN("Script does not inherit a Node: " + path);
-						ERR_CONTINUE(!valid_type);
-
-						Object *obj = ClassDB::instance(ibt);
-
-						ERR_EXPLAIN("Cannot instance script for autoload, expected 'Node' inheritance, got: " + String(ibt));
-						ERR_CONTINUE(obj == NULL);
-
-						n = Object::cast_to<Node>(obj);
-						n->set_script(s.get_ref_ptr());
-					}
-
-					ERR_EXPLAIN("Path in autoload not a node or script: " + path);
-					ERR_CONTINUE(!n);
-					n->set_name(name);
-
-					//defer so references are all valid on _ready()
-					to_add.push_back(n);
-
-					if (global_var) {
-						for (int i = 0; i < ScriptServer::get_language_count(); i++) {
-							ScriptServer::get_language(i)->add_global_constant(name, n);
-						}
-					}
-				}
-
-				for (List<Node *>::Element *E = to_add.front(); E; E = E->next()) {
-
-					sml->get_root()->add_child(E->get());
-				}
-			}
-
 			if (game_path != "") {
 				Node *scene = NULL;
 				Ref<PackedScene> scenedata = ResourceLoader::load(local_game_path);
@@ -1946,15 +1726,19 @@ bool Main::iteration() {
 
 	uint64_t ticks = OS::get_singleton()->get_ticks_usec();
 	Engine::get_singleton()->_frame_ticks = ticks;
-	_timer_sync.set_cpu_ticks_usec(ticks);
+	main_timer_sync.set_cpu_ticks_usec(ticks);
+	main_timer_sync.set_fixed_fps(fixed_fps);
 
 	uint64_t ticks_elapsed = ticks - last_ticks;
 
 	int physics_fps = Engine::get_singleton()->get_iterations_per_second();
 	float frame_slice = 1.0 / physics_fps;
 
-	_FrameTime advance = _timer_sync.advance(frame_slice, physics_fps);
-	double step = advance.animation_step;
+	float time_scale = Engine::get_singleton()->get_time_scale();
+
+	MainFrameTime advance = main_timer_sync.advance(frame_slice, physics_fps);
+	double step = advance.idle_step;
+	double scaled_step = step * time_scale;
 
 	Engine::get_singleton()->_frame_step = step;
 
@@ -1975,8 +1759,6 @@ bool Main::iteration() {
 		step -= (advance.physics_steps - max_physics_steps) * frame_slice;
 		advance.physics_steps = max_physics_steps;
 	}
-
-	float time_scale = Engine::get_singleton()->get_time_scale();
 
 	bool exit = false;
 
@@ -2018,24 +1800,21 @@ bool Main::iteration() {
 	OS::get_singleton()->get_main_loop()->idle(step * time_scale);
 	message_queue->flush();
 
-	_timer_sync.before_start_render(); //sync if still drawing from previous frames.
+	VisualServer::get_singleton()->sync(); //sync if still drawing from previous frames.
 
 	if (OS::get_singleton()->can_draw() && !disable_render_loop) {
 
 		if ((!force_redraw_requested) && OS::get_singleton()->is_in_low_processor_usage_mode()) {
 			if (VisualServer::get_singleton()->has_changed()) {
-				VisualServer::get_singleton()->draw(); // flush visual commands
+				VisualServer::get_singleton()->draw(true, scaled_step); // flush visual commands
 				Engine::get_singleton()->frames_drawn++;
 			}
 		} else {
-			VisualServer::get_singleton()->draw(); // flush visual commands
+			VisualServer::get_singleton()->draw(true, scaled_step); // flush visual commands
 			Engine::get_singleton()->frames_drawn++;
 			force_redraw_requested = false;
 		}
 	}
-
-	if (AudioServer::get_singleton())
-		AudioServer::get_singleton()->update();
 
 	idle_process_ticks = OS::get_singleton()->get_ticks_usec() - idle_begin;
 	idle_process_max = MAX(idle_process_ticks, idle_process_max);
@@ -2044,6 +1823,8 @@ bool Main::iteration() {
 	for (int i = 0; i < ScriptServer::get_language_count(); i++) {
 		ScriptServer::get_language(i)->frame();
 	}
+
+	AudioServer::get_singleton()->update();
 
 	if (script_debugger) {
 		if (script_debugger->is_profiling()) {
@@ -2176,6 +1957,15 @@ void Main::cleanup() {
 		memdelete(globals);
 	if (engine)
 		memdelete(engine);
+
+	if (OS::get_singleton()->is_restart_on_exit_set()) {
+		//attempt to restart with arguments
+		String exec = OS::get_singleton()->get_executable_path();
+		List<String> args = OS::get_singleton()->get_restart_on_exit_arguments();
+		OS::ProcessID pid = 0;
+		OS::get_singleton()->execute(exec, args, false, &pid);
+		OS::get_singleton()->set_restart_on_exit(false, List<String>()); //clear list (uses memory)
+	}
 
 	unregister_core_driver_types();
 	unregister_core_types();

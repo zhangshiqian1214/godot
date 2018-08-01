@@ -152,6 +152,8 @@ public:
 	virtual int get_audio_driver_count() const;
 	virtual String get_audio_driver_name(int p_driver) const;
 
+	virtual PoolStringArray get_connected_midi_inputs();
+
 	virtual int get_screen_count() const;
 	virtual int get_current_screen() const;
 	virtual void set_current_screen(int p_screen);
@@ -180,6 +182,10 @@ public:
 	virtual void set_borderless_window(bool p_borderless);
 	virtual bool get_borderless_window() const;
 
+	virtual bool get_window_per_pixel_transparency_enabled() const;
+	virtual void set_window_per_pixel_transparency_enabled(bool p_enabled);
+
+	virtual void set_ime_active(const bool p_active);
 	virtual void set_ime_position(const Point2 &p_pos);
 
 	Error native_video_play(String p_path, float p_volume, String p_audio_track, String p_subtitle_track);
@@ -273,6 +279,7 @@ public:
 	void delay_usec(uint32_t p_usec) const;
 	void delay_msec(uint32_t p_msec) const;
 	uint32_t get_ticks_msec() const;
+	uint64_t get_ticks_usec() const;
 	uint32_t get_splash_tick_msec() const;
 
 	bool can_use_threads() const;
@@ -686,6 +693,11 @@ public:
 	MainLoop *get_main_loop() const;
 
 	Dictionary get_version_info() const;
+	Dictionary get_author_info() const;
+	Array get_copyright_info() const;
+	Dictionary get_donor_info() const;
+	Dictionary get_license_info() const;
+	String get_license_text() const;
 
 	bool is_in_physics_frame() const;
 

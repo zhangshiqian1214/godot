@@ -190,7 +190,6 @@ private:
 
 	struct ItemNewline : public Item {
 
-		int line; // FIXME: Overriding base's line ?
 		ItemNewline() { type = ITEM_NEWLINE; }
 	};
 
@@ -285,6 +284,7 @@ private:
 
 	void _gui_input(Ref<InputEvent> p_event);
 	Item *_get_next_item(Item *p_item, bool p_free = false);
+	Item *_get_prev_item(Item *p_item, bool p_free = false);
 
 	Rect2 _get_text_rect();
 
@@ -292,6 +292,8 @@ private:
 	String bbcode;
 
 	void _update_all_lines();
+
+	int fixed_width;
 
 protected:
 	void _notification(int p_what);
@@ -334,7 +336,7 @@ public:
 	void set_tab_size(int p_spaces);
 	int get_tab_size() const;
 
-	bool search(const String &p_string, bool p_from_selection = false);
+	bool search(const String &p_string, bool p_from_selection = false, bool p_search_previous = false);
 
 	void scroll_to_line(int p_line);
 	int get_line_count() const;
@@ -367,6 +369,9 @@ public:
 
 	void set_percent_visible(float p_percent);
 	float get_percent_visible() const;
+
+	void set_fixed_size_to_width(int p_width);
+	virtual Size2 get_minimum_size() const;
 
 	RichTextLabel();
 	~RichTextLabel();

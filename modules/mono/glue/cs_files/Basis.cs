@@ -343,17 +343,17 @@ namespace Godot
         {
             var tr = this;
 
-            real_t temp = this[0, 1];
-            this[0, 1] = this[1, 0];
-            this[1, 0] = temp;
+            real_t temp = tr[0, 1];
+            tr[0, 1] = tr[1, 0];
+            tr[1, 0] = temp;
 
-            temp = this[0, 2];
-            this[0, 2] = this[2, 0];
-            this[2, 0] = temp;
+            temp = tr[0, 2];
+            tr[0, 2] = tr[2, 0];
+            tr[2, 0] = temp;
 
-            temp = this[1, 2];
-            this[1, 2] = this[2, 1];
-            this[2, 1] = temp;
+            temp = tr[1, 2];
+            tr[1, 2] = tr[2, 1];
+            tr[2, 1] = temp;
 
             return tr;
         }
@@ -444,6 +444,26 @@ namespace Godot
             _x = new Vector3(1.0f - (yy + zz), xy - wz, xz + wy);
             _y = new Vector3(xy + wz, 1.0f - (xx + zz), yz - wx);
             _z = new Vector3(xz - wy, yz + wx, 1.0f - (xx + yy));
+        }
+
+        public Basis(Vector3 euler)
+        {
+            real_t c;
+            real_t s;
+
+            c = Mathf.Cos(euler.x);
+            s = Mathf.Sin(euler.x);
+            var xmat = new Basis(1, 0, 0, 0, c, -s, 0, s, c);
+
+            c = Mathf.Cos(euler.y);
+            s = Mathf.Sin(euler.y);
+            var ymat = new Basis(c, 0, s, 0, 1, 0, -s, 0, c);
+
+            c = Mathf.Cos(euler.z);
+            s = Mathf.Sin(euler.z);
+            var zmat = new Basis(c, -s, 0, s, c, 0, 0, 0, 1);
+
+            this = ymat * xmat * zmat;
         }
 
         public Basis(Vector3 axis, real_t phi)

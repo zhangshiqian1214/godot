@@ -35,7 +35,9 @@
 #include "os/os.h"
 #include "print_string.h"
 #include "translation.h"
+
 #ifdef TOOLS_ENABLED
+#include "editor/editor_scale.h"
 #include "editor/editor_settings.h"
 #endif
 
@@ -215,12 +217,14 @@ void LineEdit::_gui_input(Ref<InputEvent> p_event) {
 				case (KEY_A): { //Select All
 					select();
 				} break;
+#ifdef APPLE_STYLE_KEYS
 				case (KEY_LEFT): { // Go to start of text - like HOME key
 					set_cursor_position(0);
 				} break;
 				case (KEY_RIGHT): { // Go to end of text - like END key
 					set_cursor_position(text.length());
 				} break;
+#endif
 				default: { handled = false; }
 			}
 
@@ -563,6 +567,9 @@ void LineEdit::_notification(int p_what) {
 #endif
 		case NOTIFICATION_RESIZED: {
 
+			if (expand_to_text_length) {
+				window_pos = 0; //force scroll back since it's expanding to text length
+			}
 			set_cursor_position(get_cursor_position());
 
 		} break;
@@ -608,7 +615,8 @@ void LineEdit::_notification(int p_what) {
 			}
 
 			int x_ofs = 0;
-			int cached_text_width = text.empty() ? cached_placeholder_width : cached_width;
+			bool using_placeholder = text.empty();
+			int cached_text_width = using_placeholder ? cached_placeholder_width : cached_width;
 
 			switch (align) {
 
@@ -643,9 +651,9 @@ void LineEdit::_notification(int p_what) {
 			Color font_color_selected = get_color("font_color_selected");
 			Color cursor_color = get_color("cursor_color");
 
-			const String &t = text.empty() ? placeholder : text;
+			const String &t = using_placeholder ? placeholder : text;
 			// draw placeholder color
-			if (text.empty())
+			if (using_placeholder)
 				font_color.a *= placeholder_alpha;
 			font_color.a *= disabled_alpha;
 
@@ -656,6 +664,7 @@ void LineEdit::_notification(int p_what) {
 			}
 
 			int caret_height = font->get_height() > y_area ? y_area : font->get_height();
+			FontDrawer drawer(font, Color(1, 1, 1));
 			while (true) {
 
 				//end of string, break!
@@ -683,7 +692,7 @@ void LineEdit::_notification(int p_what) {
 								VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2(x_ofs, y_ofs + caret_height), Size2(im_char_width, 1)), font_color);
 							}
 
-							font->draw_char(ci, Point2(x_ofs, y_ofs + font_ascent), cchar, next, font_color);
+							drawer.draw_char(ci, Point2(x_ofs, y_ofs + font_ascent), cchar, next, font_color);
 
 							x_ofs += im_char_width;
 							ofs++;
@@ -704,11 +713,16 @@ void LineEdit::_notification(int p_what) {
 				if (selected)
 					VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2(x_ofs, y_ofs), Size2(char_width, caret_height)), selection_color);
 
-				font->draw_char(ci, Point2(x_ofs, y_ofs + font_ascent), cchar, next, selected ? font_color_selected : font_color);
+				int yofs = y_ofs + (caret_height - font->get_height()) / 2;
+				drawer.draw_char(ci, Point2(x_ofs, yofs + font_ascent), cchar, next, selected ? font_color_selected : font_color);
 
 				if (char_ofs == cursor_pos && draw_caret) {
 					if (ime_text.length() == 0) {
+#ifdef TOOLS_ENABLED
+						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2(x_ofs, y_ofs), Size2(Math::round(EDSCALE), caret_height)), cursor_color);
+#else
 						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2(x_ofs, y_ofs), Size2(1, caret_height)), cursor_color);
+#endif
 					}
 				}
 
@@ -737,7 +751,7 @@ void LineEdit::_notification(int p_what) {
 							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2(x_ofs, y_ofs + caret_height), Size2(im_char_width, 1)), font_color);
 						}
 
-						font->draw_char(ci, Point2(x_ofs, y_ofs + font_ascent), cchar, next, font_color);
+						drawer.draw_char(ci, Point2(x_ofs, y_ofs + font_ascent), cchar, next, font_color);
 
 						x_ofs += im_char_width;
 						ofs++;
@@ -747,13 +761,18 @@ void LineEdit::_notification(int p_what) {
 
 			if (char_ofs == cursor_pos && draw_caret) { //may be at the end
 				if (ime_text.length() == 0) {
+#ifdef TOOLS_ENABLED
+					VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2(x_ofs, y_ofs), Size2(Math::round(EDSCALE), caret_height)), cursor_color);
+#else
 					VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2(x_ofs, y_ofs), Size2(1, caret_height)), cursor_color);
+#endif
 				}
 			}
 
 			if (has_focus()) {
 
-				OS::get_singleton()->set_ime_position(get_global_position() + Point2(x_ofs, y_ofs + caret_height));
+				OS::get_singleton()->set_ime_active(true);
+				OS::get_singleton()->set_ime_position(get_global_position() + Point2(using_placeholder ? 0 : x_ofs, y_ofs + caret_height));
 				OS::get_singleton()->set_ime_intermediate_text_callback(_ime_text_callback, this);
 			}
 		} break;
@@ -763,6 +782,7 @@ void LineEdit::_notification(int p_what) {
 				draw_caret = true;
 			}
 
+			OS::get_singleton()->set_ime_active(true);
 			Point2 cursor_pos = Point2(get_cursor_position(), 1) * get_minimum_size().height;
 			OS::get_singleton()->set_ime_position(get_global_position() + cursor_pos);
 			OS::get_singleton()->set_ime_intermediate_text_callback(_ime_text_callback, this);
@@ -775,6 +795,7 @@ void LineEdit::_notification(int p_what) {
 
 			OS::get_singleton()->set_ime_position(Point2());
 			OS::get_singleton()->set_ime_intermediate_text_callback(NULL, NULL);
+			OS::get_singleton()->set_ime_active(false);
 			ime_text = "";
 			ime_selection = Point2();
 
@@ -1004,7 +1025,6 @@ void LineEdit::set_text(String p_text) {
 	update();
 	cursor_pos = 0;
 	window_pos = 0;
-	_text_changed();
 }
 
 void LineEdit::clear() {
@@ -1092,11 +1112,12 @@ void LineEdit::set_cursor_position(int p_pos) {
 			for (int i = cursor_pos; i >= window_pos; i--) {
 
 				if (i >= text.length()) {
-					accum_width = font->get_char_size(' ').width; //anything should do
+					//do not do this, because if the cursor is at the end, its just fine that it takes no space
+					//accum_width = font->get_char_size(' ').width; //anything should do
 				} else {
 					accum_width += font->get_char_size(text[i], i + 1 < text.length() ? text[i + 1] : 0).width; //anything should do
 				}
-				if (accum_width >= window_width)
+				if (accum_width > window_width)
 					break;
 
 				wp = i;
@@ -1163,7 +1184,7 @@ Size2 LineEdit::get_minimum_size() const {
 	int mstext = get_constant("minimum_spaces") * space_size;
 
 	if (expand_to_text_length) {
-		mstext = MAX(mstext, font->get_string_size(text).x + space_size); //add a spce because some fonts are too exact
+		mstext = MAX(mstext, font->get_string_size(text).x + space_size); //add a spce because some fonts are too exact, and because cursor needs a bit more when at the end
 	}
 
 	min.width += mstext;

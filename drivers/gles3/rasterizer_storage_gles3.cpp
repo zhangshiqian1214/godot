@@ -1328,6 +1328,13 @@ void RasterizerStorageGLES3::texture_set_proxy(RID p_texture, RID p_proxy) {
 	}
 }
 
+void RasterizerStorageGLES3::texture_set_force_redraw_if_visible(RID p_texture, bool p_enable) {
+
+	Texture *texture = texture_owner.get(p_texture);
+	ERR_FAIL_COND(!texture);
+	texture->redraw_if_visible = p_enable;
+}
+
 RID RasterizerStorageGLES3::sky_create() {
 
 	Sky *sky = memnew(Sky);
@@ -1355,6 +1362,8 @@ void RasterizerStorageGLES3::sky_set_texture(RID p_sky, RID p_panorama, int p_ra
 		sky->panorama = RID();
 		ERR_FAIL_COND(!texture);
 	}
+
+	texture = texture->get_ptr(); //resolve for proxies
 
 	glBindVertexArray(0);
 	glDisable(GL_CULL_FACE);
@@ -2661,7 +2670,7 @@ void RasterizerStorageGLES3::_update_material(Material *material) {
 				}
 			}
 
-			material->textures[E->get().texture_order] = texture;
+			material->textures.write[E->get().texture_order] = texture;
 		}
 
 	} else {
@@ -2966,9 +2975,9 @@ void RasterizerStorageGLES3::mesh_add_surface(RID p_mesh, uint32_t p_format, VS:
 
 	for (int i = 0; i < surface->skeleton_bone_used.size(); i++) {
 		if (surface->skeleton_bone_aabb[i].size.x < 0 || surface->skeleton_bone_aabb[i].size.y < 0 || surface->skeleton_bone_aabb[i].size.z < 0) {
-			surface->skeleton_bone_used[i] = false;
+			surface->skeleton_bone_used.write[i] = false;
 		} else {
-			surface->skeleton_bone_used[i] = true;
+			surface->skeleton_bone_used.write[i] = true;
 		}
 	}
 
@@ -3231,7 +3240,7 @@ void RasterizerStorageGLES3::mesh_surface_update_region(RID p_mesh, int p_surfac
 
 	PoolVector<uint8_t>::Read r = p_data.read();
 
-	glBindBuffer(GL_ARRAY_BUFFER, mesh->surfaces[p_surface]->array_id);
+	glBindBuffer(GL_ARRAY_BUFFER, mesh->surfaces[p_surface]->vertex_id);
 	glBufferSubData(GL_ARRAY_BUFFER, p_offset, total_size, r.ptr());
 	glBindBuffer(GL_ARRAY_BUFFER, 0); //unbind
 }
@@ -3395,6 +3404,7 @@ Vector<PoolVector<uint8_t> > RasterizerStorageGLES3::mesh_surface_get_blend_shap
 
 	return bsarr;
 }
+
 Vector<AABB> RasterizerStorageGLES3::mesh_surface_get_skeleton_aabb(RID p_mesh, int p_surface) const {
 
 	const Mesh *mesh = mesh_owner.getornull(p_mesh);
@@ -3446,6 +3456,7 @@ void RasterizerStorageGLES3::mesh_remove_surface(RID p_mesh, int p_surface) {
 
 	mesh->instance_change_notify();
 }
+
 int RasterizerStorageGLES3::mesh_get_surface_count(RID p_mesh) const {
 
 	const Mesh *mesh = mesh_owner.getornull(p_mesh);
@@ -3459,6 +3470,7 @@ void RasterizerStorageGLES3::mesh_set_custom_aabb(RID p_mesh, const AABB &p_aabb
 	ERR_FAIL_COND(!mesh);
 
 	mesh->custom_aabb = p_aabb;
+	mesh->instance_change_notify();
 }
 
 AABB RasterizerStorageGLES3::mesh_get_custom_aabb(RID p_mesh) const {
@@ -3814,12 +3826,12 @@ RID RasterizerStorageGLES3::multimesh_create() {
 	return multimesh_owner.make_rid(multimesh);
 }
 
-void RasterizerStorageGLES3::multimesh_allocate(RID p_multimesh, int p_instances, VS::MultimeshTransformFormat p_transform_format, VS::MultimeshColorFormat p_color_format) {
+void RasterizerStorageGLES3::multimesh_allocate(RID p_multimesh, int p_instances, VS::MultimeshTransformFormat p_transform_format, VS::MultimeshColorFormat p_color_format, VS::MultimeshCustomDataFormat p_data_format) {
 
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND(!multimesh);
 
-	if (multimesh->size == p_instances && multimesh->transform_format == p_transform_format && multimesh->color_format == p_color_format)
+	if (multimesh->size == p_instances && multimesh->transform_format == p_transform_format && multimesh->color_format == p_color_format && multimesh->custom_data_format == p_data_format)
 		return;
 
 	if (multimesh->buffer) {
@@ -3830,6 +3842,7 @@ void RasterizerStorageGLES3::multimesh_allocate(RID p_multimesh, int p_instances
 	multimesh->size = p_instances;
 	multimesh->transform_format = p_transform_format;
 	multimesh->color_format = p_color_format;
+	multimesh->custom_data_format = p_data_format;
 
 	if (multimesh->size) {
 
@@ -3847,36 +3860,49 @@ void RasterizerStorageGLES3::multimesh_allocate(RID p_multimesh, int p_instances
 			multimesh->color_floats = 4;
 		}
 
-		int format_floats = multimesh->color_floats + multimesh->xform_floats;
+		if (multimesh->custom_data_format == VS::MULTIMESH_CUSTOM_DATA_NONE) {
+			multimesh->custom_data_floats = 0;
+		} else if (multimesh->custom_data_format == VS::MULTIMESH_CUSTOM_DATA_8BIT) {
+			multimesh->custom_data_floats = 1;
+		} else if (multimesh->custom_data_format == VS::MULTIMESH_CUSTOM_DATA_FLOAT) {
+			multimesh->custom_data_floats = 4;
+		}
+
+		int format_floats = multimesh->color_floats + multimesh->xform_floats + multimesh->custom_data_floats;
+
 		multimesh->data.resize(format_floats * p_instances);
-		for (int i = 0; i < p_instances; i += format_floats) {
+
+		for (int i = 0; i < p_instances * format_floats; i += format_floats) {
 
 			int color_from = 0;
+			int custom_data_from = 0;
 
 			if (multimesh->transform_format == VS::MULTIMESH_TRANSFORM_2D) {
-				multimesh->data[i + 0] = 1.0;
-				multimesh->data[i + 1] = 0.0;
-				multimesh->data[i + 2] = 0.0;
-				multimesh->data[i + 3] = 0.0;
-				multimesh->data[i + 4] = 0.0;
-				multimesh->data[i + 5] = 1.0;
-				multimesh->data[i + 6] = 0.0;
-				multimesh->data[i + 7] = 0.0;
+				multimesh->data.write[i + 0] = 1.0;
+				multimesh->data.write[i + 1] = 0.0;
+				multimesh->data.write[i + 2] = 0.0;
+				multimesh->data.write[i + 3] = 0.0;
+				multimesh->data.write[i + 4] = 0.0;
+				multimesh->data.write[i + 5] = 1.0;
+				multimesh->data.write[i + 6] = 0.0;
+				multimesh->data.write[i + 7] = 0.0;
 				color_from = 8;
+				custom_data_from = 8;
 			} else {
-				multimesh->data[i + 0] = 1.0;
-				multimesh->data[i + 1] = 0.0;
-				multimesh->data[i + 2] = 0.0;
-				multimesh->data[i + 3] = 0.0;
-				multimesh->data[i + 4] = 0.0;
-				multimesh->data[i + 5] = 1.0;
-				multimesh->data[i + 6] = 0.0;
-				multimesh->data[i + 7] = 0.0;
-				multimesh->data[i + 8] = 0.0;
-				multimesh->data[i + 9] = 0.0;
-				multimesh->data[i + 10] = 1.0;
-				multimesh->data[i + 11] = 0.0;
+				multimesh->data.write[i + 0] = 1.0;
+				multimesh->data.write[i + 1] = 0.0;
+				multimesh->data.write[i + 2] = 0.0;
+				multimesh->data.write[i + 3] = 0.0;
+				multimesh->data.write[i + 4] = 0.0;
+				multimesh->data.write[i + 5] = 1.0;
+				multimesh->data.write[i + 6] = 0.0;
+				multimesh->data.write[i + 7] = 0.0;
+				multimesh->data.write[i + 8] = 0.0;
+				multimesh->data.write[i + 9] = 0.0;
+				multimesh->data.write[i + 10] = 1.0;
+				multimesh->data.write[i + 11] = 0.0;
 				color_from = 12;
+				custom_data_from = 12;
 			}
 
 			if (multimesh->color_format == VS::MULTIMESH_COLOR_NONE) {
@@ -3889,13 +3915,34 @@ void RasterizerStorageGLES3::multimesh_allocate(RID p_multimesh, int p_instances
 				} cu;
 
 				cu.colu = 0xFFFFFFFF;
-				multimesh->data[i + color_from + 0] = cu.colf;
+				multimesh->data.write[i + color_from + 0] = cu.colf;
+				custom_data_from = color_from + 1;
 
 			} else if (multimesh->color_format == VS::MULTIMESH_COLOR_FLOAT) {
-				multimesh->data[i + color_from + 0] = 1.0;
-				multimesh->data[i + color_from + 1] = 1.0;
-				multimesh->data[i + color_from + 2] = 1.0;
-				multimesh->data[i + color_from + 3] = 1.0;
+				multimesh->data.write[i + color_from + 0] = 1.0;
+				multimesh->data.write[i + color_from + 1] = 1.0;
+				multimesh->data.write[i + color_from + 2] = 1.0;
+				multimesh->data.write[i + color_from + 3] = 1.0;
+				custom_data_from = color_from + 4;
+			}
+
+			if (multimesh->custom_data_format == VS::MULTIMESH_CUSTOM_DATA_NONE) {
+				//none
+			} else if (multimesh->custom_data_format == VS::MULTIMESH_CUSTOM_DATA_8BIT) {
+
+				union {
+					uint32_t colu;
+					float colf;
+				} cu;
+
+				cu.colu = 0;
+				multimesh->data.write[i + custom_data_from + 0] = cu.colf;
+
+			} else if (multimesh->custom_data_format == VS::MULTIMESH_CUSTOM_DATA_FLOAT) {
+				multimesh->data.write[i + custom_data_from + 0] = 0.0;
+				multimesh->data.write[i + custom_data_from + 1] = 0.0;
+				multimesh->data.write[i + custom_data_from + 2] = 0.0;
+				multimesh->data.write[i + custom_data_from + 3] = 0.0;
 			}
 		}
 
@@ -3956,8 +4003,8 @@ void RasterizerStorageGLES3::multimesh_instance_set_transform(RID p_multimesh, i
 	ERR_FAIL_INDEX(p_index, multimesh->size);
 	ERR_FAIL_COND(multimesh->transform_format == VS::MULTIMESH_TRANSFORM_2D);
 
-	int stride = multimesh->color_floats + multimesh->xform_floats;
-	float *dataptr = &multimesh->data[stride * p_index];
+	int stride = multimesh->color_floats + multimesh->xform_floats + multimesh->custom_data_floats;
+	float *dataptr = &multimesh->data.write[stride * p_index];
 
 	dataptr[0] = p_transform.basis.elements[0][0];
 	dataptr[1] = p_transform.basis.elements[0][1];
@@ -3987,8 +4034,8 @@ void RasterizerStorageGLES3::multimesh_instance_set_transform_2d(RID p_multimesh
 	ERR_FAIL_INDEX(p_index, multimesh->size);
 	ERR_FAIL_COND(multimesh->transform_format == VS::MULTIMESH_TRANSFORM_3D);
 
-	int stride = multimesh->color_floats + multimesh->xform_floats;
-	float *dataptr = &multimesh->data[stride * p_index];
+	int stride = multimesh->color_floats + multimesh->xform_floats + multimesh->custom_data_floats;
+	float *dataptr = &multimesh->data.write[stride * p_index];
 
 	dataptr[0] = p_transform.elements[0][0];
 	dataptr[1] = p_transform.elements[1][0];
@@ -4013,8 +4060,8 @@ void RasterizerStorageGLES3::multimesh_instance_set_color(RID p_multimesh, int p
 	ERR_FAIL_INDEX(p_index, multimesh->size);
 	ERR_FAIL_COND(multimesh->color_format == VS::MULTIMESH_COLOR_NONE);
 
-	int stride = multimesh->color_floats + multimesh->xform_floats;
-	float *dataptr = &multimesh->data[stride * p_index + multimesh->xform_floats];
+	int stride = multimesh->color_floats + multimesh->xform_floats + multimesh->custom_data_floats;
+	float *dataptr = &multimesh->data.write[stride * p_index + multimesh->xform_floats];
 
 	if (multimesh->color_format == VS::MULTIMESH_COLOR_8BIT) {
 
@@ -4039,6 +4086,38 @@ void RasterizerStorageGLES3::multimesh_instance_set_color(RID p_multimesh, int p
 	}
 }
 
+void RasterizerStorageGLES3::multimesh_instance_set_custom_data(RID p_multimesh, int p_index, const Color &p_custom_data) {
+
+	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
+	ERR_FAIL_COND(!multimesh);
+	ERR_FAIL_INDEX(p_index, multimesh->size);
+	ERR_FAIL_COND(multimesh->custom_data_format == VS::MULTIMESH_CUSTOM_DATA_NONE);
+
+	int stride = multimesh->color_floats + multimesh->xform_floats + multimesh->custom_data_floats;
+	float *dataptr = &multimesh->data.write[stride * p_index + multimesh->xform_floats + multimesh->color_floats];
+
+	if (multimesh->custom_data_format == VS::MULTIMESH_CUSTOM_DATA_8BIT) {
+
+		uint8_t *data8 = (uint8_t *)dataptr;
+		data8[0] = CLAMP(p_custom_data.r * 255.0, 0, 255);
+		data8[1] = CLAMP(p_custom_data.g * 255.0, 0, 255);
+		data8[2] = CLAMP(p_custom_data.b * 255.0, 0, 255);
+		data8[3] = CLAMP(p_custom_data.a * 255.0, 0, 255);
+
+	} else if (multimesh->custom_data_format == VS::MULTIMESH_CUSTOM_DATA_FLOAT) {
+		dataptr[0] = p_custom_data.r;
+		dataptr[1] = p_custom_data.g;
+		dataptr[2] = p_custom_data.b;
+		dataptr[3] = p_custom_data.a;
+	}
+
+	multimesh->dirty_data = true;
+	multimesh->dirty_aabb = true;
+
+	if (!multimesh->update_list.in_list()) {
+		multimesh_update_list.add(&multimesh->update_list);
+	}
+}
 RID RasterizerStorageGLES3::multimesh_get_mesh(RID p_multimesh) const {
 
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
@@ -4054,8 +4133,8 @@ Transform RasterizerStorageGLES3::multimesh_instance_get_transform(RID p_multime
 	ERR_FAIL_INDEX_V(p_index, multimesh->size, Transform());
 	ERR_FAIL_COND_V(multimesh->transform_format == VS::MULTIMESH_TRANSFORM_2D, Transform());
 
-	int stride = multimesh->color_floats + multimesh->xform_floats;
-	float *dataptr = &multimesh->data[stride * p_index];
+	int stride = multimesh->color_floats + multimesh->xform_floats + multimesh->custom_data_floats;
+	float *dataptr = &multimesh->data.write[stride * p_index];
 
 	Transform xform;
 
@@ -4081,8 +4160,8 @@ Transform2D RasterizerStorageGLES3::multimesh_instance_get_transform_2d(RID p_mu
 	ERR_FAIL_INDEX_V(p_index, multimesh->size, Transform2D());
 	ERR_FAIL_COND_V(multimesh->transform_format == VS::MULTIMESH_TRANSFORM_3D, Transform2D());
 
-	int stride = multimesh->color_floats + multimesh->xform_floats;
-	float *dataptr = &multimesh->data[stride * p_index];
+	int stride = multimesh->color_floats + multimesh->xform_floats + multimesh->custom_data_floats;
+	float *dataptr = &multimesh->data.write[stride * p_index];
 
 	Transform2D xform;
 
@@ -4103,8 +4182,8 @@ Color RasterizerStorageGLES3::multimesh_instance_get_color(RID p_multimesh, int 
 	ERR_FAIL_INDEX_V(p_index, multimesh->size, Color());
 	ERR_FAIL_COND_V(multimesh->color_format == VS::MULTIMESH_COLOR_NONE, Color());
 
-	int stride = multimesh->color_floats + multimesh->xform_floats;
-	float *dataptr = &multimesh->data[stride * p_index + multimesh->xform_floats];
+	int stride = multimesh->color_floats + multimesh->xform_floats + multimesh->custom_data_floats;
+	float *dataptr = &multimesh->data.write[stride * p_index + multimesh->xform_floats];
 
 	if (multimesh->color_format == VS::MULTIMESH_COLOR_8BIT) {
 		union {
@@ -4127,6 +4206,59 @@ Color RasterizerStorageGLES3::multimesh_instance_get_color(RID p_multimesh, int 
 	}
 
 	return Color();
+}
+
+Color RasterizerStorageGLES3::multimesh_instance_get_custom_data(RID p_multimesh, int p_index) const {
+
+	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
+	ERR_FAIL_COND_V(!multimesh, Color());
+	ERR_FAIL_INDEX_V(p_index, multimesh->size, Color());
+	ERR_FAIL_COND_V(multimesh->custom_data_format == VS::MULTIMESH_CUSTOM_DATA_NONE, Color());
+
+	int stride = multimesh->color_floats + multimesh->xform_floats + multimesh->custom_data_floats;
+	float *dataptr = &multimesh->data.write[stride * p_index + multimesh->xform_floats + multimesh->color_floats];
+
+	if (multimesh->custom_data_format == VS::MULTIMESH_CUSTOM_DATA_8BIT) {
+		union {
+			uint32_t colu;
+			float colf;
+		} cu;
+
+		cu.colf = dataptr[0];
+
+		return Color::hex(BSWAP32(cu.colu));
+
+	} else if (multimesh->custom_data_format == VS::MULTIMESH_CUSTOM_DATA_FLOAT) {
+		Color c;
+		c.r = dataptr[0];
+		c.g = dataptr[1];
+		c.b = dataptr[2];
+		c.a = dataptr[3];
+
+		return c;
+	}
+
+	return Color();
+}
+
+void RasterizerStorageGLES3::multimesh_set_as_bulk_array(RID p_multimesh, const PoolVector<float> &p_array) {
+
+	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
+	ERR_FAIL_COND(!multimesh);
+
+	int dsize = multimesh->data.size();
+
+	ERR_FAIL_COND(dsize != p_array.size());
+
+	PoolVector<float>::Read r = p_array.read();
+	copymem(multimesh->data.ptrw(), r.ptr(), dsize * sizeof(float));
+
+	multimesh->dirty_data = true;
+	multimesh->dirty_aabb = true;
+
+	if (!multimesh->update_list.in_list()) {
+		multimesh_update_list.add(&multimesh->update_list);
+	}
 }
 
 void RasterizerStorageGLES3::multimesh_set_visible_instances(RID p_multimesh, int p_visible) {
@@ -4177,7 +4309,7 @@ void RasterizerStorageGLES3::update_dirty_multimeshes() {
 				mesh_aabb.size += Vector3(0.001, 0.001, 0.001);
 			}
 
-			int stride = multimesh->color_floats + multimesh->xform_floats;
+			int stride = multimesh->color_floats + multimesh->xform_floats + multimesh->custom_data_floats;
 			int count = multimesh->data.size();
 			float *data = multimesh->data.ptrw();
 
@@ -5640,7 +5772,7 @@ void RasterizerStorageGLES3::particles_set_draw_pass_mesh(RID p_particles, int p
 	Particles *particles = particles_owner.getornull(p_particles);
 	ERR_FAIL_COND(!particles);
 	ERR_FAIL_INDEX(p_pass, particles->draw_passes.size());
-	particles->draw_passes[p_pass] = p_mesh;
+	particles->draw_passes.write[p_pass] = p_mesh;
 }
 
 void RasterizerStorageGLES3::particles_restart(RID p_particles) {
@@ -5895,9 +6027,9 @@ void RasterizerStorageGLES3::update_particles() {
 							tex = resources.white_tex;
 						} break;
 					}
-
 				} else {
 
+					t = t->get_ptr(); //resolve for proxies
 					target = t->target;
 					tex = t->tex_id;
 				}
@@ -6514,7 +6646,7 @@ void RasterizerStorageGLES3::_render_target_allocate(RenderTarget *rt) {
 
 			for (int j = 0; j < rt->effects.mip_maps[i].sizes.size(); j++) {
 
-				RenderTarget::Effects::MipMaps::Size &mm = rt->effects.mip_maps[i].sizes[j];
+				RenderTarget::Effects::MipMaps::Size &mm = rt->effects.mip_maps[i].sizes.write[j];
 
 				glGenFramebuffers(1, &mm.fbo);
 				glBindFramebuffer(GL_FRAMEBUFFER, mm.fbo);
@@ -6926,7 +7058,7 @@ bool RasterizerStorageGLES3::free(RID p_rid) {
 
 			for (int i = 0; i < ins->materials.size(); i++) {
 				if (ins->materials[i] == p_rid) {
-					ins->materials[i] = RID();
+					ins->materials.write[i] = RID();
 				}
 			}
 		}
@@ -7334,7 +7466,7 @@ void RasterizerStorageGLES3::initialize() {
 
 	{
 		//transform feedback buffers
-		uint32_t xf_feedback_size = GLOBAL_DEF("rendering/limits/buffers/blend_shape_max_buffer_size_kb", 4096);
+		uint32_t xf_feedback_size = GLOBAL_DEF_RST("rendering/limits/buffers/blend_shape_max_buffer_size_kb", 4096);
 		for (int i = 0; i < 2; i++) {
 
 			glGenBuffers(1, &resources.transform_feedback_buffers[i]);
@@ -7357,7 +7489,6 @@ void RasterizerStorageGLES3::initialize() {
 #endif
 
 	frame.count = 0;
-	frame.prev_tick = 0;
 	frame.delta = 0;
 	frame.current_rt = NULL;
 	config.keep_original_textures = false;
