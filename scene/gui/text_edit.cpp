@@ -1177,7 +1177,12 @@ void TextEdit::_notification(int p_what) {
 							int yofs = ofs_y + (get_row_height() - cache.font->get_height()) / 2;
 							int w = drawer.draw_char(ci, Point2i(char_ofs + char_margin + ofs_x, yofs + ascent), str[j], str[j + 1], in_selection && override_selected_font_color ? cache.font_selected_color : color);
 							if (underlined) {
-								draw_rect(Rect2(char_ofs + char_margin + ofs_x, yofs + ascent + 2, w, 1), in_selection && override_selected_font_color ? cache.font_selected_color : color);
+								float line_width = 1.0;
+#ifdef TOOLS_ENABLED
+								line_width *= EDSCALE;
+#endif
+
+								draw_rect(Rect2(char_ofs + char_margin + ofs_x, yofs + ascent + 2, w, line_width), in_selection && override_selected_font_color ? cache.font_selected_color : color);
 							}
 						} else if (draw_tabs && str[j] == '\t') {
 							int yofs = (get_row_height() - cache.tab_icon->get_height()) / 2;
@@ -2195,9 +2200,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 			k->set_shift(false);
 		}
 
-		if (!k->get_command()) {
-			_reset_caret_blink_timer();
-		}
+		_reset_caret_blink_timer();
 
 		// save here for insert mode, just in case it is cleared in the following section
 		bool had_selection = selection.active;
@@ -5765,8 +5768,11 @@ void TextEdit::_update_completion_candidates() {
 			}
 			// Calculate the similarity to keep completions in good order
 			float similarity;
-			if (completion_strings[i].to_lower().begins_with(s.to_lower())) {
-				// Substrings are the best candidates
+			if (completion_strings[i].begins_with(s)) {
+				// Substrings (same case) are the best candidates
+				similarity = 1.2;
+			} else if (completion_strings[i].to_lower().begins_with(s.to_lower())) {
+				// then any substrings
 				similarity = 1.1;
 			} else {
 				// Otherwise compute the similarity
@@ -6410,7 +6416,7 @@ Map<int, TextEdit::HighlighterInfo> TextEdit::_get_line_syntax_highlighting(int 
 		}
 
 		// check for dot or underscore or 'x' for hex notation in floating point number
-		if ((str[j] == '.' || str[j] == 'x' || str[j] == '_') && !in_word && prev_is_number && !is_number) {
+		if ((str[j] == '.' || str[j] == 'x' || str[j] == '_' || str[j] == 'f') && !in_word && prev_is_number && !is_number) {
 			is_number = true;
 			is_symbol = false;
 			is_char = false;

@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  power_haiku.cpp                                                      */
+/*  plugin_config_dialog.h                                               */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,47 +28,44 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "core/error_macros.h"
+#ifndef PLUGIN_CONFIG_DIALOG_H
+#define PLUGIN_CONFIG_DIALOG_H
 
-#include "power_haiku.h"
+#include "scene/gui/check_box.h"
+#include "scene/gui/dialogs.h"
+#include "scene/gui/line_edit.h"
+#include "scene/gui/option_button.h"
+#include "scene/gui/text_edit.h"
 
-bool PowerHaiku::UpdatePowerInfo() {
+class PluginConfigDialog : public ConfirmationDialog {
 
-	return false;
-}
+	GDCLASS(PluginConfigDialog, ConfirmationDialog);
 
-OS::PowerState PowerHaiku::get_power_state() {
-	if (UpdatePowerInfo()) {
-		return power_state;
-	} else {
-		WARN_PRINT("Power management is not implemented on this platform, defaulting to POWERSTATE_UNKNOWN");
-		return OS::POWERSTATE_UNKNOWN;
-	}
-}
+	LineEdit *name_edit;
+	LineEdit *subfolder_edit;
+	TextEdit *desc_edit;
+	LineEdit *author_edit;
+	LineEdit *version_edit;
+	OptionButton *script_option_edit;
+	LineEdit *script_edit;
+	CheckBox *active_edit;
 
-int PowerX11::get_power_seconds_left() {
-	if (UpdatePowerInfo()) {
-		return nsecs_left;
-	} else {
-		WARN_PRINT("Power management is not implemented on this platform, defaulting to -1");
-		return -1;
-	}
-}
+	bool _edit_mode;
 
-int PowerX11::get_power_percent_left() {
-	if (UpdatePowerInfo()) {
-		return percent_left;
-	} else {
-		WARN_PRINT("Power management is not implemented on this platform, defaulting to -1");
-		return -1;
-	}
-}
+	void _clear_fields();
+	void _on_confirmed();
+	void _on_cancelled();
+	void _on_required_text_changed(const String &p_text);
 
-PowerHaiku::PowerHaiku() :
-		nsecs_left(-1),
-		percent_left(-1),
-		power_state(OS::POWERSTATE_UNKNOWN) {
-}
+protected:
+	virtual void _notification(int p_what);
+	static void _bind_methods();
 
-PowerHaiku::~PowerHaiku() {
-}
+public:
+	void config(const String &p_plugin_dir_name);
+
+	PluginConfigDialog();
+	~PluginConfigDialog();
+};
+
+#endif // PLUGIN_CONFIG_DIALOG_H

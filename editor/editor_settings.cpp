@@ -396,7 +396,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 
 	_initial_set("text_editor/cursor/block_caret", false);
 	_initial_set("text_editor/cursor/caret_blink", true);
-	_initial_set("text_editor/cursor/caret_blink_speed", 0.65);
+	_initial_set("text_editor/cursor/caret_blink_speed", 0.5);
 	hints["text_editor/cursor/caret_blink_speed"] = PropertyInfo(Variant::REAL, "text_editor/cursor/caret_blink_speed", PROPERTY_HINT_RANGE, "0.1, 10, 0.01");
 	_initial_set("text_editor/cursor/right_click_moves_caret", true);
 
@@ -511,6 +511,8 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("filesystem/file_dialog/thumbnail_size", 64);
 	hints["filesystem/file_dialog/thumbnail_size"] = PropertyInfo(Variant::INT, "filesystem/file_dialog/thumbnail_size", PROPERTY_HINT_RANGE, "32,128,16");
 
+	_initial_set("docks/filesystem/disable_split", false);
+	_initial_set("docks/filesystem/split_mode_minimum_height", 600);
 	_initial_set("docks/filesystem/display_mode", 0);
 	hints["docks/filesystem/display_mode"] = PropertyInfo(Variant::INT, "docks/filesystem/display_mode", PROPERTY_HINT_ENUM, "Thumbnails,List");
 	_initial_set("docks/filesystem/thumbnail_size", 64);
@@ -755,7 +757,7 @@ void EditorSettings::create() {
 		}
 
 		if (dir->change_dir(data_dir) != OK) {
-			dir->make_dir(data_dir);
+			dir->make_dir_recursive(data_dir);
 			if (dir->change_dir(data_dir) != OK) {
 				ERR_PRINT("Cannot create data directory!");
 				memdelete(dir);
@@ -771,14 +773,8 @@ void EditorSettings::create() {
 
 		// Validate/create cache dir
 
-		if (dir->change_dir(cache_path) != OK) {
-			ERR_PRINT("Cannot find path for cache directory!");
-			memdelete(dir);
-			goto fail;
-		}
-
 		if (dir->change_dir(cache_dir) != OK) {
-			dir->make_dir(cache_dir);
+			dir->make_dir_recursive(cache_dir);
 			if (dir->change_dir(cache_dir) != OK) {
 				ERR_PRINT("Cannot create cache directory!");
 				memdelete(dir);
@@ -788,14 +784,8 @@ void EditorSettings::create() {
 
 		// Validate/create config dir and subdirectories
 
-		if (dir->change_dir(config_path) != OK) {
-			ERR_PRINT("Cannot find path for config directory!");
-			memdelete(dir);
-			goto fail;
-		}
-
 		if (dir->change_dir(config_dir) != OK) {
-			dir->make_dir(config_dir);
+			dir->make_dir_recursive(config_dir);
 			if (dir->change_dir(config_dir) != OK) {
 				ERR_PRINT("Cannot create config directory!");
 				memdelete(dir);

@@ -1,12 +1,12 @@
 /*************************************************************************/
-/*  power_haiku.h                                                        */
+/*  skeleton_ik_editor_plugin.h                                             */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -28,26 +28,38 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef PLATFORM_HAIKU_POWER_HAIKU_H_
-#define PLATFORM_HAIKU_POWER_HAIKU_H_
+#ifndef SKELETON_IK_EDITOR_PLUGIN_H
+#define SKELETON_IK_EDITOR_PLUGIN_H
 
-#include <os/os.h>
+#include "editor/editor_node.h"
+#include "editor/editor_plugin.h"
 
-class PowerHaiku {
-private:
-	int nsecs_left;
-	int percent_left;
-	OS::PowerState power_state;
+class SkeletonIK;
 
-	bool UpdatePowerInfo();
+class SkeletonIKEditorPlugin : public EditorPlugin {
+
+	GDCLASS(SkeletonIKEditorPlugin, EditorPlugin);
+
+	SkeletonIK *skeleton_ik;
+
+	Button *play_btn;
+	EditorNode *editor;
+	Vector<Transform> initial_bone_poses;
+
+	void _play();
+
+protected:
+	static void _bind_methods();
 
 public:
-	PowerHaiku();
-	virtual ~PowerHaiku();
+	virtual String get_name() const { return "SkeletonIK"; }
+	bool has_main_screen() const { return false; }
+	virtual void edit(Object *p_object);
+	virtual bool handles(Object *p_object) const;
+	virtual void make_visible(bool p_visible);
 
-	OS::PowerState get_power_state();
-	int get_power_seconds_left();
-	int get_power_percent_left();
+	SkeletonIKEditorPlugin(EditorNode *p_node);
+	~SkeletonIKEditorPlugin();
 };
 
-#endif /* PLATFORM_HAIKU_POWER_HAIKU_H_ */
+#endif // SKELETON_IK_EDITOR_PLUGIN_H

@@ -63,6 +63,7 @@
 #include "editor/import/resource_importer_bitmask.h"
 #include "editor/import/resource_importer_csv_translation.h"
 #include "editor/import/resource_importer_image.h"
+#include "editor/import/resource_importer_layered_texture.h"
 #include "editor/import/resource_importer_obj.h"
 #include "editor/import/resource_importer_scene.h"
 #include "editor/import/resource_importer_texture.h"
@@ -109,6 +110,7 @@
 #include "editor/plugins/shader_graph_editor_plugin.h"
 #include "editor/plugins/skeleton_2d_editor_plugin.h"
 #include "editor/plugins/skeleton_editor_plugin.h"
+#include "editor/plugins/skeleton_ik_editor_plugin.h"
 #include "editor/plugins/spatial_editor_plugin.h"
 #include "editor/plugins/sprite_editor_plugin.h"
 #include "editor/plugins/sprite_frames_editor_plugin.h"
@@ -409,6 +411,18 @@ void EditorNode::_notification(int p_what) {
 	}
 }
 
+void EditorNode::_on_plugin_ready(Object *p_script, const String &p_activate_name) {
+	Ref<Script> script = Object::cast_to<Script>(p_script);
+	if (script.is_null())
+		return;
+	if (p_activate_name.length()) {
+		set_addon_plugin_enabled(p_activate_name, true);
+	}
+	project_settings->update_plugins();
+	project_settings->hide();
+	push_item(script.operator->());
+}
+
 void EditorNode::_fs_changed() {
 
 	for (Set<FileDialog *>::Element *E = file_dialogs.front(); E; E = E->next()) {
@@ -599,7 +613,7 @@ void EditorNode::save_resource_in_path(const Ref<Resource> &p_resource, const St
 	Error err = ResourceSaver::save(path, p_resource, flg | ResourceSaver::FLAG_REPLACE_SUBRESOURCE_PATHS);
 
 	if (err != OK) {
-		show_accept(TTR("Error saving resource!"), TTR("I see..."));
+		show_accept(TTR("Error saving resource!"), TTR("OK"));
 		return;
 	}
 
@@ -689,15 +703,15 @@ void EditorNode::_dialog_display_save_error(String p_file, Error p_error) {
 
 			case ERR_FILE_CANT_WRITE: {
 
-				show_accept(TTR("Can't open file for writing:") + " " + p_file.get_extension(), TTR("I see..."));
+				show_accept(TTR("Can't open file for writing:") + " " + p_file.get_extension(), TTR("OK"));
 			} break;
 			case ERR_FILE_UNRECOGNIZED: {
 
-				show_accept(TTR("Requested file format unknown:") + " " + p_file.get_extension(), TTR("I see..."));
+				show_accept(TTR("Requested file format unknown:") + " " + p_file.get_extension(), TTR("OK"));
 			} break;
 			default: {
 
-				show_accept(TTR("Error while saving."), TTR("I see..."));
+				show_accept(TTR("Error while saving."), TTR("OK"));
 			} break;
 		}
 	}
@@ -711,23 +725,23 @@ void EditorNode::_dialog_display_load_error(String p_file, Error p_error) {
 
 			case ERR_CANT_OPEN: {
 
-				show_accept(vformat(TTR("Can't open '%s'. The file could have been moved or deleted."), p_file.get_file()), TTR("I see..."));
+				show_accept(vformat(TTR("Can't open '%s'. The file could have been moved or deleted."), p_file.get_file()), TTR("OK"));
 			} break;
 			case ERR_PARSE_ERROR: {
 
-				show_accept(vformat(TTR("Error while parsing '%s'."), p_file.get_file()), TTR("I see..."));
+				show_accept(vformat(TTR("Error while parsing '%s'."), p_file.get_file()), TTR("OK"));
 			} break;
 			case ERR_FILE_CORRUPT: {
 
-				show_accept(vformat(TTR("Unexpected end of file '%s'."), p_file.get_file()), TTR("I see..."));
+				show_accept(vformat(TTR("Unexpected end of file '%s'."), p_file.get_file()), TTR("OK"));
 			} break;
 			case ERR_FILE_NOT_FOUND: {
 
-				show_accept(vformat(TTR("Missing '%s' or its dependencies."), p_file.get_file()), TTR("I see..."));
+				show_accept(vformat(TTR("Missing '%s' or its dependencies."), p_file.get_file()), TTR("OK"));
 			} break;
 			default: {
 
-				show_accept(vformat(TTR("Error while loading '%s'."), p_file.get_file()), TTR("I see..."));
+				show_accept(vformat(TTR("Error while loading '%s'."), p_file.get_file()), TTR("OK"));
 			} break;
 		}
 	}
@@ -989,7 +1003,7 @@ void EditorNode::_save_scene(String p_file, int idx) {
 
 	if (!scene) {
 
-		show_accept(TTR("This operation can't be done without a tree root."), TTR("I see..."));
+		show_accept(TTR("This operation can't be done without a tree root."), TTR("OK"));
 		return;
 	}
 
@@ -1017,7 +1031,7 @@ void EditorNode::_save_scene(String p_file, int idx) {
 
 	if (err != OK) {
 
-		show_accept(TTR("Couldn't save scene. Likely dependencies (instances or inheritance) couldn't be satisfied."), TTR("I see..."));
+		show_accept(TTR("Couldn't save scene. Likely dependencies (instances or inheritance) couldn't be satisfied."), TTR("OK"));
 		return;
 	}
 
@@ -1025,7 +1039,7 @@ void EditorNode::_save_scene(String p_file, int idx) {
 	// (hacky but needed for the tree to update properly)
 	Node *dummy_scene = sdata->instance(PackedScene::GEN_EDIT_STATE_INSTANCE);
 	if (!dummy_scene) {
-		show_accept(TTR("Couldn't save scene. Likely dependencies (instances or inheritance) couldn't be satisfied."), TTR("I see..."));
+		show_accept(TTR("Couldn't save scene. Likely dependencies (instances or inheritance) couldn't be satisfied."), TTR("OK"));
 		return;
 	}
 	memdelete(dummy_scene);
@@ -1187,7 +1201,7 @@ void EditorNode::_dialog_action(String p_file) {
 				ml = ResourceLoader::load(p_file, "MeshLibrary");
 
 				if (ml.is_null()) {
-					show_accept(TTR("Can't load MeshLibrary for merging!"), TTR("I see..."));
+					show_accept(TTR("Can't load MeshLibrary for merging!"), TTR("OK"));
 					return;
 				}
 			}
@@ -1200,7 +1214,7 @@ void EditorNode::_dialog_action(String p_file) {
 
 			Error err = ResourceSaver::save(p_file, ml);
 			if (err) {
-				show_accept(TTR("Error saving MeshLibrary!"), TTR("I see..."));
+				show_accept(TTR("Error saving MeshLibrary!"), TTR("OK"));
 				return;
 			}
 
@@ -1212,7 +1226,7 @@ void EditorNode::_dialog_action(String p_file) {
 				tileset = ResourceLoader::load(p_file, "TileSet");
 
 				if (tileset.is_null()) {
-					show_accept(TTR("Can't load TileSet for merging!"), TTR("I see..."));
+					show_accept(TTR("Can't load TileSet for merging!"), TTR("OK"));
 					return;
 				}
 
@@ -1225,7 +1239,7 @@ void EditorNode::_dialog_action(String p_file) {
 			Error err = ResourceSaver::save(p_file, tileset);
 			if (err) {
 
-				show_accept("Error saving TileSet!", "I see...");
+				show_accept(TTR("Error saving TileSet!"), TTR("OK"));
 				return;
 			}
 		} break;
@@ -1579,7 +1593,7 @@ void EditorNode::_run(bool p_current, const String &p_custom) {
 		Node *scene = editor_data.get_edited_scene_root();
 
 		if (!scene) {
-			show_accept(TTR("There is no defined scene to run."), TTR("I see..."));
+			show_accept(TTR("There is no defined scene to run."), TTR("OK"));
 			return;
 		}
 
@@ -1633,7 +1647,7 @@ void EditorNode::_run(bool p_current, const String &p_custom) {
 
 				if (scene->get_filename() == "") {
 
-					show_accept(TTR("Current scene was never saved, please save it prior to running."), TTR("I see..."));
+					show_accept(TTR("Current scene was never saved, please save it prior to running."), TTR("OK"));
 					return;
 				}
 
@@ -1664,7 +1678,7 @@ void EditorNode::_run(bool p_current, const String &p_custom) {
 
 	if (error != OK) {
 
-		show_accept(TTR("Could not start subprocess!"), TTR("I see..."));
+		show_accept(TTR("Could not start subprocess!"), TTR("OK"));
 		return;
 	}
 
@@ -1787,7 +1801,7 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 
 			if (!scene) {
 
-				show_accept(TTR("This operation can't be done without a tree root."), TTR("I see..."));
+				show_accept(TTR("This operation can't be done without a tree root."), TTR("OK"));
 				break;
 			}
 
@@ -1850,7 +1864,7 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 
 			if (!editor_data.get_edited_scene_root()) {
 
-				show_accept(TTR("This operation can't be done without a scene."), TTR("I see..."));
+				show_accept(TTR("This operation can't be done without a scene."), TTR("OK"));
 				break;
 			}
 
@@ -1870,7 +1884,7 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 
 			//Make sure that the scene has a root before trying to convert to tileset
 			if (!editor_data.get_edited_scene_root()) {
-				show_accept(TTR("This operation can't be done without a root node."), TTR("I see..."));
+				show_accept(TTR("This operation can't be done without a root node."), TTR("OK"));
 				break;
 			}
 
@@ -1891,7 +1905,7 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 
 			if (!editor_data.get_edited_scene_root()) {
 
-				show_accept(TTR("This operation can't be done without a selected node."), TTR("I see..."));
+				show_accept(TTR("This operation can't be done without a selected node."), TTR("OK"));
 				break;
 			}
 
@@ -2168,7 +2182,7 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 			OS::get_singleton()->set_low_processor_usage_mode(false);
 			EditorSettings::get_singleton()->set_project_metadata("editor_options", "update_always", true);
 
-			show_accept(TTR("This option is deprecated. Situations where refresh must be forced are now considered a bug. Please report."), TTR("I see..."));
+			show_accept(TTR("This option is deprecated. Situations where refresh must be forced are now considered a bug. Please report."), TTR("OK"));
 		} break;
 		case SETTINGS_UPDATE_CHANGES: {
 
@@ -2545,6 +2559,7 @@ void EditorNode::set_addon_plugin_enabled(const String &p_addon, bool p_enabled)
 
 	EditorPlugin *ep = memnew(EditorPlugin);
 	ep->set_script(script.get_ref_ptr());
+	ep->set_dir_cache(p_addon);
 	plugin_addons[p_addon] = ep;
 	add_editor_plugin(ep);
 
@@ -2782,7 +2797,7 @@ Error EditorNode::load_scene(const String &p_scene, bool p_ignore_broken_deps, b
 
 	if (!lpath.begins_with("res://")) {
 
-		show_accept(TTR("Error loading scene, it must be inside the project path. Use 'Import' to open the scene, then save it inside the project path."), TTR("Ugh"));
+		show_accept(TTR("Error loading scene, it must be inside the project path. Use 'Import' to open the scene, then save it inside the project path."), TTR("OK"));
 		opening_prev = false;
 		return ERR_FILE_NOT_FOUND;
 	}
@@ -4546,6 +4561,8 @@ void EditorNode::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_resources_reimported"), &EditorNode::_resources_reimported);
 	ClassDB::bind_method(D_METHOD("_bottom_panel_raise_toggled"), &EditorNode::_bottom_panel_raise_toggled);
 
+	ClassDB::bind_method(D_METHOD("_on_plugin_ready"), &EditorNode::_on_plugin_ready);
+
 	ClassDB::bind_method(D_METHOD("_video_driver_selected"), &EditorNode::_video_driver_selected);
 
 	ADD_SIGNAL(MethodInfo("play_pressed"));
@@ -4564,7 +4581,7 @@ static Node *_resource_get_edited_scene() {
 
 void EditorNode::_print_handler(void *p_this, const String &p_string, bool p_error) {
 	EditorNode *en = (EditorNode *)p_this;
-	en->log->add_message(p_string, p_error);
+	en->log->add_message(p_string, p_error ? EditorLog::MSG_TYPE_ERROR : EditorLog::MSG_TYPE_STD);
 }
 
 EditorNode::EditorNode() {
@@ -4665,6 +4682,16 @@ EditorNode::EditorNode() {
 		import_texture.instance();
 		ResourceFormatImporter::get_singleton()->add_importer(import_texture);
 
+		Ref<ResourceImporterLayeredTexture> import_3d;
+		import_3d.instance();
+		import_3d->set_3d(true);
+		ResourceFormatImporter::get_singleton()->add_importer(import_3d);
+
+		Ref<ResourceImporterLayeredTexture> import_array;
+		import_array.instance();
+		import_array->set_3d(false);
+		ResourceFormatImporter::get_singleton()->add_importer(import_array);
+
 		Ref<ResourceImporterImage> import_image;
 		import_image.instance();
 		ResourceFormatImporter::get_singleton()->add_importer(import_image);
@@ -4761,8 +4788,10 @@ EditorNode::EditorNode() {
 	EDITOR_DEF_RST("interface/scene_tabs/show_thumbnail_on_hover", true);
 	EDITOR_DEF_RST("interface/inspector/capitalize_properties", true);
 	EDITOR_DEF_RST("interface/inspector/disable_folding", false);
+	EDITOR_DEF("interface/inspector/horizontal_vector2_editing", false);
+	EDITOR_DEF("interface/inspector/horizontal_vector3_editing", true);
 	EDITOR_DEF("interface/inspector/open_resources_in_current_inspector", true);
-	EDITOR_DEF("interface/inspector/resources_types_to_open_in_new_inspector", "SpatialMaterial");
+	EDITOR_DEF("interface/inspector/resources_types_to_open_in_new_inspector", "SpatialMaterial,Script");
 	EDITOR_DEF("run/auto_save/save_before_running", true);
 
 	theme_base = memnew(Control);
@@ -5120,6 +5149,10 @@ EditorNode::EditorNode() {
 	p->connect("id_pressed", this, "_menu_option");
 	p->add_item(TTR("Export"), FILE_EXPORT_PROJECT);
 
+	plugin_config_dialog = memnew(PluginConfigDialog);
+	plugin_config_dialog->connect("plugin_ready", this, "_on_plugin_ready");
+	gui_base->add_child(plugin_config_dialog);
+
 	tool_menu = memnew(PopupMenu);
 	tool_menu->set_name("Tools");
 	tool_menu->connect("index_pressed", this, "_tool_menu_option");
@@ -5395,7 +5428,7 @@ EditorNode::EditorNode() {
 	}
 
 	filesystem_dock = memnew(FileSystemDock(this));
-	filesystem_dock->set_display_mode(int(EditorSettings::get_singleton()->get("docks/filesystem/display_mode")));
+	filesystem_dock->set_file_list_display_mode(int(EditorSettings::get_singleton()->get("docks/filesystem/display_mode")));
 
 	if (use_single_dock_column) {
 		dock_slot[DOCK_SLOT_RIGHT_BL]->add_child(filesystem_dock);
@@ -5434,6 +5467,7 @@ EditorNode::EditorNode() {
 	bottom_panel->add_child(bottom_panel_vb);
 
 	bottom_panel_hb = memnew(HBoxContainer);
+	bottom_panel_hb->set_custom_minimum_size(Size2(0, 24)); // Adjust for the height of the "Expand Bottom Dock" icon.
 	bottom_panel_vb->add_child(bottom_panel_hb);
 
 	bottom_panel_hb_editors = memnew(HBoxContainer);
@@ -5596,6 +5630,7 @@ EditorNode::EditorNode() {
 	add_editor_plugin(memnew(AudioBusesEditorPlugin(audio_bus_editor)));
 	add_editor_plugin(memnew(AudioBusesEditorPlugin(audio_bus_editor)));
 	add_editor_plugin(memnew(SkeletonEditorPlugin(this)));
+	add_editor_plugin(memnew(SkeletonIKEditorPlugin(this)));
 	add_editor_plugin(memnew(PhysicalBonePlugin(this)));
 
 	// FIXME: Disabled as (according to reduz) users were complaining that it gets in the way

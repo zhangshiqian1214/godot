@@ -46,11 +46,22 @@ EditorPropertyNil::EditorPropertyNil() {
 }
 
 ///////////////////// TEXT /////////////////////////
+
+void EditorPropertyText::_text_entered(const String &p_string) {
+	if (updating)
+		return;
+
+	if (text->has_focus()) {
+		text->release_focus();
+		_text_changed(p_string);
+	}
+}
+
 void EditorPropertyText::_text_changed(const String &p_string) {
 	if (updating)
 		return;
 
-	emit_signal("property_changed", get_edited_property(), p_string, true);
+	emit_signal("property_changed", get_edited_property(), p_string);
 }
 
 void EditorPropertyText::update_property() {
@@ -64,6 +75,7 @@ void EditorPropertyText::update_property() {
 void EditorPropertyText::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("_text_changed", "txt"), &EditorPropertyText::_text_changed);
+	ClassDB::bind_method(D_METHOD("_text_entered", "txt"), &EditorPropertyText::_text_entered);
 }
 
 EditorPropertyText::EditorPropertyText() {
@@ -71,6 +83,8 @@ EditorPropertyText::EditorPropertyText() {
 	add_child(text);
 	add_focusable(text);
 	text->connect("text_changed", this, "_text_changed");
+	text->connect("text_entered", this, "_text_entered");
+
 	updating = false;
 }
 
@@ -78,12 +92,12 @@ EditorPropertyText::EditorPropertyText() {
 
 void EditorPropertyMultilineText::_big_text_changed() {
 	text->set_text(big_text->get_text());
-	emit_signal("property_changed", get_edited_property(), big_text->get_text(), true);
+	emit_signal("property_changed", get_edited_property(), big_text->get_text());
 }
 
 void EditorPropertyMultilineText::_text_changed() {
 
-	emit_signal("property_changed", get_edited_property(), text->get_text(), true);
+	emit_signal("property_changed", get_edited_property(), text->get_text());
 }
 
 void EditorPropertyMultilineText::_open_big_text() {
@@ -1069,18 +1083,35 @@ void EditorPropertyVector2::setup(double p_min, double p_max, double p_step, boo
 }
 
 EditorPropertyVector2::EditorPropertyVector2() {
-	VBoxContainer *vb = memnew(VBoxContainer);
-	add_child(vb);
+	bool horizontal = EDITOR_GET("interface/inspector/horizontal_vector2_editing");
+
+	BoxContainer *bc;
+
+	if (horizontal) {
+		bc = memnew(HBoxContainer);
+		add_child(bc);
+		set_bottom_editor(bc);
+	} else {
+		bc = memnew(VBoxContainer);
+		add_child(bc);
+	}
+
 	static const char *desc[2] = { "x", "y" };
 	for (int i = 0; i < 2; i++) {
 		spin[i] = memnew(EditorSpinSlider);
 		spin[i]->set_flat(true);
 		spin[i]->set_label(desc[i]);
-		vb->add_child(spin[i]);
+		bc->add_child(spin[i]);
 		add_focusable(spin[i]);
 		spin[i]->connect("value_changed", this, "_value_changed");
+		if (horizontal) {
+			spin[i]->set_h_size_flags(SIZE_EXPAND_FILL);
+		}
 	}
-	set_label_reference(spin[0]); //show text and buttons around this
+
+	if (!horizontal) {
+		set_label_reference(spin[0]); //show text and buttons around this
+	}
 	setting = false;
 }
 
@@ -1195,19 +1226,35 @@ void EditorPropertyVector3::setup(double p_min, double p_max, double p_step, boo
 }
 
 EditorPropertyVector3::EditorPropertyVector3() {
-	VBoxContainer *vb = memnew(VBoxContainer);
-	add_child(vb);
+	bool horizontal = EDITOR_GET("interface/inspector/horizontal_vector3_editing");
+
+	BoxContainer *bc;
+
+	if (horizontal) {
+		bc = memnew(HBoxContainer);
+		add_child(bc);
+		set_bottom_editor(bc);
+	} else {
+		bc = memnew(VBoxContainer);
+		add_child(bc);
+	}
+
 	static const char *desc[3] = { "x", "y", "z" };
 	for (int i = 0; i < 3; i++) {
 		spin[i] = memnew(EditorSpinSlider);
-		spin[i]->set_label(desc[i]);
 		spin[i]->set_flat(true);
-
-		vb->add_child(spin[i]);
+		spin[i]->set_label(desc[i]);
+		bc->add_child(spin[i]);
 		add_focusable(spin[i]);
 		spin[i]->connect("value_changed", this, "_value_changed");
+		if (horizontal) {
+			spin[i]->set_h_size_flags(SIZE_EXPAND_FILL);
+		}
 	}
-	set_label_reference(spin[0]); //show text and buttons around this
+
+	if (!horizontal) {
+		set_label_reference(spin[0]); //show text and buttons around this
+	}
 	setting = false;
 }
 ///////////////////// PLANE /////////////////////////
@@ -1259,18 +1306,36 @@ void EditorPropertyPlane::setup(double p_min, double p_max, double p_step, bool 
 }
 
 EditorPropertyPlane::EditorPropertyPlane() {
-	VBoxContainer *vb = memnew(VBoxContainer);
-	add_child(vb);
+
+	bool horizontal = EDITOR_GET("interface/inspector/horizontal_vector3_editing");
+
+	BoxContainer *bc;
+
+	if (horizontal) {
+		bc = memnew(HBoxContainer);
+		add_child(bc);
+		set_bottom_editor(bc);
+	} else {
+		bc = memnew(VBoxContainer);
+		add_child(bc);
+	}
+
 	static const char *desc[4] = { "x", "y", "z", "d" };
 	for (int i = 0; i < 4; i++) {
 		spin[i] = memnew(EditorSpinSlider);
-		spin[i]->set_label(desc[i]);
 		spin[i]->set_flat(true);
-		vb->add_child(spin[i]);
+		spin[i]->set_label(desc[i]);
+		bc->add_child(spin[i]);
 		add_focusable(spin[i]);
 		spin[i]->connect("value_changed", this, "_value_changed");
+		if (horizontal) {
+			spin[i]->set_h_size_flags(SIZE_EXPAND_FILL);
+		}
 	}
-	set_label_reference(spin[0]); //show text and buttons around this
+
+	if (!horizontal) {
+		set_label_reference(spin[0]); //show text and buttons around this
+	}
 	setting = false;
 }
 
@@ -1323,19 +1388,35 @@ void EditorPropertyQuat::setup(double p_min, double p_max, double p_step, bool p
 }
 
 EditorPropertyQuat::EditorPropertyQuat() {
-	VBoxContainer *vb = memnew(VBoxContainer);
-	add_child(vb);
+	bool horizontal = EDITOR_GET("interface/inspector/horizontal_vector3_editing");
+
+	BoxContainer *bc;
+
+	if (horizontal) {
+		bc = memnew(HBoxContainer);
+		add_child(bc);
+		set_bottom_editor(bc);
+	} else {
+		bc = memnew(VBoxContainer);
+		add_child(bc);
+	}
+
 	static const char *desc[4] = { "x", "y", "z", "w" };
 	for (int i = 0; i < 4; i++) {
 		spin[i] = memnew(EditorSpinSlider);
-		spin[i]->set_label(desc[i]);
 		spin[i]->set_flat(true);
-
-		vb->add_child(spin[i]);
+		spin[i]->set_label(desc[i]);
+		bc->add_child(spin[i]);
 		add_focusable(spin[i]);
 		spin[i]->connect("value_changed", this, "_value_changed");
+		if (horizontal) {
+			spin[i]->set_h_size_flags(SIZE_EXPAND_FILL);
+		}
 	}
-	set_label_reference(spin[0]); //show text and buttons around this
+
+	if (!horizontal) {
+		set_label_reference(spin[0]); //show text and buttons around this
+	}
 	setting = false;
 }
 
@@ -2173,7 +2254,7 @@ void EditorPropertyResource::_sub_inspector_object_id_selected(int p_id) {
 void EditorPropertyResource::_open_editor_pressed() {
 	RES res = get_edited_object()->get(get_edited_property());
 	if (res.is_valid()) {
-		EditorNode::get_singleton()->edit_resource(res.ptr());
+		EditorNode::get_singleton()->edit_item(res.ptr());
 	}
 }
 

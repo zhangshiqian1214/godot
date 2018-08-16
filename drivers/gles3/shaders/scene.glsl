@@ -339,7 +339,7 @@ void main() {
 #endif
 #endif
 
-	float roughness=0.0;
+	float roughness = 1.0;
 
 //defines that make writing custom shaders easier
 #define projection_matrix local_projection
@@ -1608,18 +1608,18 @@ void main() {
 
 	//lay out everything, whathever is unused is optimized away anyway
 	highp vec3 vertex = vertex_interp;
-	vec3 albedo = vec3(0.8,0.8,0.8);
+	vec3 albedo = vec3(1.0);
 	vec3 transmission = vec3(0.0);
 	float metallic = 0.0;
 	float specular = 0.5;
-	vec3 emission = vec3(0.0,0.0,0.0);
+	vec3 emission = vec3(0.0);
 	float roughness = 1.0;
 	float rim = 0.0;
 	float rim_tint = 0.0;
-	float clearcoat=0.0;
-	float clearcoat_gloss=0.0;
-	float anisotropy = 1.0;
-	vec2 anisotropy_flow = vec2(1.0,0.0);
+	float clearcoat = 0.0;
+	float clearcoat_gloss = 0.0;
+	float anisotropy = 0.0;
+	vec2 anisotropy_flow = vec2(1.0, 0.0);
 
 #if defined(ENABLE_AO)
 	float ao=1.0;
@@ -1700,7 +1700,7 @@ FRAGMENT_SHADER_CODE
 #if defined(ENABLE_NORMALMAP)
 
 	normalmap.xy=normalmap.xy*2.0-1.0;
-	normalmap.z=sqrt(1.0-dot(normalmap.xy,normalmap.xy)); //always ignore Z, as it can be RG packed, Z may be pos/neg, etc.
+	normalmap.z=sqrt(max(0.0, 1.0-dot(normalmap.xy,normalmap.xy))); //always ignore Z, as it can be RG packed, Z may be pos/neg, etc.
 
 	normal = normalize( mix(normal_interp,tangent * normalmap.x + binormal * normalmap.y + normal * normalmap.z,normaldepth) ) * side;
 

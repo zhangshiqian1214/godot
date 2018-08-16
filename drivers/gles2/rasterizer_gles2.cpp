@@ -317,7 +317,7 @@ void RasterizerGLES2::set_boot_image(const Ref<Image> &p_image, const Color &p_c
 	canvas->canvas_begin();
 
 	RID texture = storage->texture_create();
-	storage->texture_allocate(texture, p_image->get_width(), p_image->get_height(), p_image->get_format(), VS::TEXTURE_FLAG_FILTER);
+	storage->texture_allocate(texture, p_image->get_width(), p_image->get_height(), 0, p_image->get_format(), VS::TEXTURE_TYPE_2D, VS::TEXTURE_FLAG_FILTER);
 	storage->texture_set_data(texture, p_image);
 
 	Rect2 imgrect(0, 0, p_image->get_width(), p_image->get_height());
@@ -392,6 +392,12 @@ void RasterizerGLES2::end_frame(bool p_swap_buffers) {
 		OS::get_singleton()->swap_buffers();
 	else
 		glFinish();
+
+	if (p_swap_buffers) {
+		glColorMask(true, true, true, true);
+		glClearColor(0, 0, 0, 1);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
 }
 
 void RasterizerGLES2::finalize() {

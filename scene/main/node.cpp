@@ -1415,11 +1415,6 @@ bool Node::is_greater_than(const Node *p_node) const {
 	return res;
 }
 
-bool Node::has_priority_higher_than(const Node *p_node) const {
-	ERR_FAIL_NULL_V(p_node, false);
-	return data.process_priority > p_node->data.process_priority;
-}
-
 void Node::get_owned_by(Node *p_by, List<Node *> *p_owned) {
 
 	if (data.owner == p_by)
@@ -2560,6 +2555,9 @@ void Node::clear_internal_tree_resource_paths() {
 
 String Node::get_configuration_warning() const {
 
+	if (get_script_instance() && get_script_instance()->has_method("_get_configuration_warning")) {
+		return get_script_instance()->call("_get_configuration_warning");
+	}
 	return String();
 }
 
@@ -2768,6 +2766,7 @@ void Node::_bind_methods() {
 	BIND_VMETHOD(MethodInfo("_input", PropertyInfo(Variant::OBJECT, "event", PROPERTY_HINT_RESOURCE_TYPE, "InputEvent")));
 	BIND_VMETHOD(MethodInfo("_unhandled_input", PropertyInfo(Variant::OBJECT, "event", PROPERTY_HINT_RESOURCE_TYPE, "InputEvent")));
 	BIND_VMETHOD(MethodInfo("_unhandled_key_input", PropertyInfo(Variant::OBJECT, "event", PROPERTY_HINT_RESOURCE_TYPE, "InputEventKey")));
+	BIND_VMETHOD(MethodInfo(Variant::STRING, "_get_configuration_warning"));
 
 	//ClassDB::bind_method(D_METHOD("get_child",&Node::get_child,PH("index")));
 	//ClassDB::bind_method(D_METHOD("get_node",&Node::get_node,PH("path")));
