@@ -75,7 +75,7 @@ void main() {
 #endif
 
 {
-        vec2 src_vtx=outvec.xy;
+	vec2 src_vtx = outvec.xy;
 VERTEX_SHADER_CODE
 
 }
@@ -83,7 +83,6 @@ VERTEX_SHADER_CODE
 	color_interp = color;
 
 	gl_Position = projection_matrix * modelview_matrix * outvec;
-
 }
 
 [fragment]
@@ -96,9 +95,9 @@ precision mediump float;
 precision mediump int;
 #endif
 
-uniform sampler2D color_texture; // texunit:0
+uniform sampler2D color_texture; // texunit:-1
 uniform highp vec2 color_texpixel_size;
-uniform mediump sampler2D normal_texture; // texunit:1
+uniform mediump sampler2D normal_texture; // texunit:-2
 
 varying mediump vec2 uv_interp;
 varying mediump vec4 color_interp;
@@ -109,7 +108,7 @@ uniform vec4 final_modulate;
 
 #ifdef SCREEN_TEXTURE_USED
 
-uniform sampler2D screen_texture; // texunit:2
+uniform sampler2D screen_texture; // texunit:-3
 
 #endif
 
@@ -120,7 +119,6 @@ uniform vec2 screen_pixel_size;
 #endif
 
 FRAGMENT_SHADER_GLOBALS
-
 
 void main() {
 
@@ -135,11 +133,9 @@ void main() {
 
 FRAGMENT_SHADER_CODE
 
-
 }
 
 	color *= final_modulate;
 
 	gl_FragColor = color;
-
 }

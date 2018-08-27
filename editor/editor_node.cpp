@@ -74,6 +74,7 @@
 #include "editor/plugins/animation_player_editor_plugin.h"
 #include "editor/plugins/animation_state_machine_editor.h"
 #include "editor/plugins/animation_tree_editor_plugin.h"
+#include "editor/plugins/animation_tree_player_editor_plugin.h"
 #include "editor/plugins/asset_library_editor_plugin.h"
 #include "editor/plugins/audio_stream_editor_plugin.h"
 #include "editor/plugins/baked_lightmap_editor_plugin.h"
@@ -83,7 +84,6 @@
 #include "editor/plugins/collision_polygon_editor_plugin.h"
 #include "editor/plugins/collision_shape_2d_editor_plugin.h"
 #include "editor/plugins/cpu_particles_editor_plugin.h"
-#include "editor/plugins/cube_grid_theme_editor_plugin.h"
 #include "editor/plugins/curve_editor_plugin.h"
 #include "editor/plugins/editor_preview_plugins.h"
 #include "editor/plugins/gi_probe_editor_plugin.h"
@@ -94,6 +94,7 @@
 #include "editor/plugins/material_editor_plugin.h"
 #include "editor/plugins/mesh_editor_plugin.h"
 #include "editor/plugins/mesh_instance_editor_plugin.h"
+#include "editor/plugins/mesh_library_editor_plugin.h"
 #include "editor/plugins/multimesh_editor_plugin.h"
 #include "editor/plugins/navigation_polygon_editor_plugin.h"
 #include "editor/plugins/particles_2d_editor_plugin.h"
@@ -107,7 +108,6 @@
 #include "editor/plugins/script_editor_plugin.h"
 #include "editor/plugins/script_text_editor.h"
 #include "editor/plugins/shader_editor_plugin.h"
-#include "editor/plugins/shader_graph_editor_plugin.h"
 #include "editor/plugins/skeleton_2d_editor_plugin.h"
 #include "editor/plugins/skeleton_editor_plugin.h"
 #include "editor/plugins/skeleton_ik_editor_plugin.h"
@@ -4591,6 +4591,10 @@ EditorNode::EditorNode() {
 	VisualServer::get_singleton()->textures_keep_original(true);
 	VisualServer::get_singleton()->set_debug_generate_wireframes(true);
 
+	PhysicsServer::get_singleton()->set_active(false); // no physics by default if editor
+	Physics2DServer::get_singleton()->set_active(false); // no physics by default if editor
+	ScriptServer::set_scripting_enabled(false); // no scripting by default if editor
+
 	EditorHelp::generate_doc(); //before any editor classes are crated
 	SceneState::set_disable_placeholders(true);
 	ResourceLoader::clear_translation_remaps(); //no remaps using during editor
@@ -5589,16 +5593,13 @@ EditorNode::EditorNode() {
 
 	add_editor_plugin(memnew(ShaderEditorPlugin(this)));
 	add_editor_plugin(memnew(VisualShaderEditorPlugin(this)));
-	add_editor_plugin(memnew(AnimationNodeBlendTreeEditorPlugin(this)));
-	add_editor_plugin(memnew(AnimationNodeBlendSpace1DEditorPlugin(this)));
-	add_editor_plugin(memnew(AnimationNodeBlendSpace2DEditorPlugin(this)));
-	add_editor_plugin(memnew(AnimationNodeStateMachineEditorPlugin(this)));
 
 	add_editor_plugin(memnew(CameraEditorPlugin(this)));
 	add_editor_plugin(memnew(ThemeEditorPlugin(this)));
 	add_editor_plugin(memnew(MultiMeshEditorPlugin(this)));
 	add_editor_plugin(memnew(MeshInstanceEditorPlugin(this)));
 	add_editor_plugin(memnew(AnimationTreeEditorPlugin(this)));
+	add_editor_plugin(memnew(AnimationTreePlayerEditorPlugin(this)));
 	add_editor_plugin(memnew(MeshLibraryEditorPlugin(this)));
 	add_editor_plugin(memnew(StyleBoxEditorPlugin(this)));
 	add_editor_plugin(memnew(SpriteEditorPlugin(this)));
@@ -5682,10 +5683,6 @@ EditorNode::EditorNode() {
 
 	_edit_current();
 	current = NULL;
-
-	PhysicsServer::get_singleton()->set_active(false); // no physics by default if editor
-	Physics2DServer::get_singleton()->set_active(false); // no physics by default if editor
-	ScriptServer::set_scripting_enabled(false); // no scripting by default if editor
 
 	reference_resource_mem = true;
 	save_external_resources_mem = true;
