@@ -29,7 +29,7 @@
 /*************************************************************************/
 
 #include "tile_set.h"
-#include "array.h"
+#include "core/array.h"
 
 bool TileSet::_set(const StringName &p_name, const Variant &p_value) {
 
@@ -940,6 +940,8 @@ void TileSet::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("create_tile", "id"), &TileSet::create_tile);
 	ClassDB::bind_method(D_METHOD("autotile_set_bitmask_mode", "id", "mode"), &TileSet::autotile_set_bitmask_mode);
 	ClassDB::bind_method(D_METHOD("autotile_get_bitmask_mode", "id"), &TileSet::autotile_get_bitmask_mode);
+	ClassDB::bind_method(D_METHOD("autotile_set_size", "id", "size"), &TileSet::autotile_set_size);
+	ClassDB::bind_method(D_METHOD("autotile_get_size", "id"), &TileSet::autotile_get_size);
 	ClassDB::bind_method(D_METHOD("tile_set_name", "id", "name"), &TileSet::tile_set_name);
 	ClassDB::bind_method(D_METHOD("tile_get_name", "id"), &TileSet::tile_get_name);
 	ClassDB::bind_method(D_METHOD("tile_set_texture", "id", "texture"), &TileSet::tile_set_texture);
@@ -956,6 +958,8 @@ void TileSet::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("tile_get_region", "id"), &TileSet::tile_get_region);
 	ClassDB::bind_method(D_METHOD("tile_set_shape", "id", "shape_id", "shape"), &TileSet::tile_set_shape);
 	ClassDB::bind_method(D_METHOD("tile_get_shape", "id", "shape_id"), &TileSet::tile_get_shape);
+	ClassDB::bind_method(D_METHOD("tile_set_shape_offset", "id", "shape_id", "shape_offset"), &TileSet::tile_set_shape_offset);
+	ClassDB::bind_method(D_METHOD("tile_get_shape_offset", "id", "shape_id"), &TileSet::tile_get_shape_offset);
 	ClassDB::bind_method(D_METHOD("tile_set_shape_transform", "id", "shape_id", "shape_transform"), &TileSet::tile_set_shape_transform);
 	ClassDB::bind_method(D_METHOD("tile_get_shape_transform", "id", "shape_id"), &TileSet::tile_get_shape_transform);
 	ClassDB::bind_method(D_METHOD("tile_set_shape_one_way", "id", "shape_id", "one_way"), &TileSet::tile_set_shape_one_way);

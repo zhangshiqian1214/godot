@@ -29,11 +29,12 @@
 /*************************************************************************/
 
 #include "texture.h"
+
 #include "bit_mask.h"
+#include "core/core_string_names.h"
+#include "core/io/image_loader.h"
 #include "core/method_bind_ext.gen.inc"
 #include "core/os/os.h"
-#include "core_string_names.h"
-#include "io/image_loader.h"
 
 Size2 Texture::get_size() const {
 
@@ -1606,7 +1607,7 @@ void GradientTexture::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_update"), &GradientTexture::_update);
 
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "gradient", PROPERTY_HINT_RESOURCE_TYPE, "Gradient"), "set_gradient", "get_gradient");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "width"), "set_width", "get_width");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "width", PROPERTY_HINT_RANGE, "1,2048,1,or_greater"), "set_width", "get_width");
 }
 
 void GradientTexture::set_gradient(Ref<Gradient> p_gradient) {

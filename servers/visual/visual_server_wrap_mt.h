@@ -31,8 +31,8 @@
 #ifndef VISUAL_SERVER_WRAP_MT_H
 #define VISUAL_SERVER_WRAP_MT_H
 
-#include "command_queue_mt.h"
-#include "os/thread.h"
+#include "core/command_queue_mt.h"
+#include "core/os/thread.h"
 #include "servers/visual_server.h"
 
 /**
@@ -137,6 +137,7 @@ public:
 
 	FUNC3(material_set_param, RID, const StringName &, const Variant &)
 	FUNC2RC(Variant, material_get_param, RID, const StringName &)
+	FUNC2RC(Variant, material_get_param_default, RID, const StringName &)
 
 	FUNC2(material_set_render_priority, RID, int)
 	FUNC2(material_set_line_width, RID, float)
@@ -489,6 +490,8 @@ public:
 
 	FUNC2(canvas_item_set_visible, RID, bool)
 	FUNC2(canvas_item_set_light_mask, RID, int)
+
+	FUNC2(canvas_item_set_update_when_visible, RID, bool)
 
 	FUNC2(canvas_item_set_transform, RID, const Transform2D &)
 	FUNC2(canvas_item_set_clip, RID, bool)

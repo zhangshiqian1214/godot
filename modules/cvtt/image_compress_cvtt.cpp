@@ -30,9 +30,9 @@
 
 #include "image_compress_cvtt.h"
 
-#include "os/os.h"
-#include "os/thread.h"
-#include "print_string.h"
+#include "core/os/os.h"
+#include "core/os/thread.h"
+#include "core/print_string.h"
 
 #include <ConvectionKernels.h>
 
@@ -247,8 +247,8 @@ void image_compress_cvtt(Image *p_image, float p_lossy_quality, Image::CompressS
 		}
 
 		dst_ofs += (MAX(4, bw) * MAX(4, bh)) >> shift;
-		w >>= 1;
-		h >>= 1;
+		w = MAX(w / 2, 1);
+		h = MAX(h / 2, 1);
 	}
 
 	if (num_job_threads > 0) {

@@ -30,11 +30,11 @@
 
 #include "editor_help.h"
 
+#include "core/os/keyboard.h"
 #include "doc_data_compressed.gen.h"
 #include "editor/plugins/script_editor_plugin.h"
 #include "editor_node.h"
 #include "editor_settings.h"
-#include "os/keyboard.h"
 
 #define CONTRIBUTE_URL "http://docs.godotengine.org/en/latest/community/contributing/updating_the_class_reference.html"
 #define CONTRIBUTE2_URL "https://github.com/godotengine/godot-docs"
@@ -225,7 +225,6 @@ bool EditorHelpSearch::IncrementalSearch::work(uint64_t slot) {
 
 void EditorHelpSearch::_update_search() {
 	search_options->clear();
-	search_options->set_hide_root(true);
 
 	String term = search_box->get_text();
 	if (term.length() < 2)
@@ -307,6 +306,7 @@ EditorHelpSearch::EditorHelpSearch() {
 	search_box->connect("text_changed", this, "_text_changed");
 	search_box->connect("gui_input", this, "_sbox_input");
 	search_options = memnew(Tree);
+	search_options->set_hide_root(true);
 	vbc->add_margin_child(TTR("Matches:"), search_options, true);
 	get_ok()->set_text(TTR("Open"));
 	get_ok()->set_disabled(true);
@@ -397,6 +397,16 @@ void EditorHelpIndex::_notification(int p_what) {
 		//_update_icons
 		search_box->set_right_icon(get_icon("Search", "EditorIcons"));
 		search_box->set_clear_button_enabled(true);
+
+		bool enable_rl = EditorSettings::get_singleton()->get("docks/scene_tree/draw_relationship_lines");
+		Color rl_color = EditorSettings::get_singleton()->get("docks/scene_tree/relationship_line_color");
+
+		if (enable_rl) {
+			class_list->add_constant_override("draw_relationship_lines", 1);
+			class_list->add_color_override("relationship_line_color", rl_color);
+		} else {
+			class_list->add_constant_override("draw_relationship_lines", 0);
+		}
 	}
 }
 
@@ -410,7 +420,6 @@ void EditorHelpIndex::_update_class_list() {
 	class_list->clear();
 	tree_item_map.clear();
 	TreeItem *root = class_list->create_item();
-	class_list->set_hide_root(true);
 
 	String filter = search_box->get_text().strip_edges();
 	String to_select = "";
@@ -489,9 +498,20 @@ EditorHelpIndex::EditorHelpIndex() {
 
 	class_list = memnew(Tree);
 	vbc->add_margin_child(TTR("Class List:") + " ", class_list, true);
+	class_list->set_hide_root(true);
 	class_list->set_v_size_flags(SIZE_EXPAND_FILL);
 
 	class_list->connect("item_activated", this, "_tree_item_selected");
+
+	bool enable_rl = EditorSettings::get_singleton()->get("docks/scene_tree/draw_relationship_lines");
+	Color rl_color = EditorSettings::get_singleton()->get("docks/scene_tree/relationship_line_color");
+
+	if (enable_rl) {
+		class_list->add_constant_override("draw_relationship_lines", 1);
+		class_list->add_color_override("relationship_line_color", rl_color);
+	} else {
+		class_list->add_constant_override("draw_relationship_lines", 0);
+	}
 
 	get_ok()->set_text(TTR("Open"));
 	set_title(TTR("Search Classes"));
@@ -756,6 +776,7 @@ void EditorHelp::_update_doc() {
 	Ref<Font> doc_code_font = get_font("doc_source", "EditorFonts");
 	String link_color_text = title_color.to_html(false);
 
+	// Class name
 	section_line.push_back(Pair<String, int>(TTR("Top"), 0));
 	class_desc->push_font(doc_title_font);
 	class_desc->push_color(title_color);
@@ -767,17 +788,17 @@ void EditorHelp::_update_doc() {
 	class_desc->pop();
 	class_desc->add_newline();
 
+	// Inheritance tree
+
+	// Ascendents
 	if (cd.inherits != "") {
 
 		class_desc->push_color(title_color);
-		class_desc->push_font(doc_title_font);
+		class_desc->push_font(doc_font);
 		class_desc->add_text(TTR("Inherits:") + " ");
-		class_desc->pop();
 		class_desc->pop();
 
 		String inherits = cd.inherits;
-
-		class_desc->push_font(doc_font);
 
 		while (inherits != "") {
 			_add_type(inherits);
@@ -793,6 +814,7 @@ void EditorHelp::_update_doc() {
 		class_desc->add_newline();
 	}
 
+	// Descendents
 	if (ClassDB::class_exists(cd.name)) {
 
 		bool found = false;
@@ -804,13 +826,10 @@ void EditorHelp::_update_doc() {
 
 				if (!found) {
 					class_desc->push_color(title_color);
-					class_desc->push_font(doc_title_font);
+					class_desc->push_font(doc_font);
 					class_desc->add_text(TTR("Inherited by:") + " ");
 					class_desc->pop();
-					class_desc->pop();
-
 					found = true;
-					class_desc->push_font(doc_font);
 				}
 
 				if (prev) {
@@ -833,6 +852,7 @@ void EditorHelp::_update_doc() {
 	class_desc->add_newline();
 	class_desc->add_newline();
 
+	// Brief description
 	if (cd.brief_description != "") {
 
 		class_desc->push_color(title_color);
@@ -854,15 +874,16 @@ void EditorHelp::_update_doc() {
 		class_desc->add_newline();
 	}
 
+	// Properties overview
 	Set<String> skip_methods;
 	bool property_descr = false;
 
 	if (cd.properties.size()) {
 
-		section_line.push_back(Pair<String, int>(TTR("Members"), class_desc->get_line_count() - 2));
+		section_line.push_back(Pair<String, int>(TTR("Properties"), class_desc->get_line_count() - 2));
 		class_desc->push_color(title_color);
 		class_desc->push_font(doc_title_font);
-		class_desc->add_text(TTR("Members:"));
+		class_desc->add_text(TTR("Properties:"));
 		class_desc->pop();
 		class_desc->pop();
 
@@ -920,6 +941,7 @@ void EditorHelp::_update_doc() {
 		class_desc->add_newline();
 	}
 
+	// Methods overview
 	bool method_descr = false;
 	bool sort_methods = EditorSettings::get_singleton()->get("text_editor/help/sort_functions_alphabetically");
 
@@ -936,10 +958,10 @@ void EditorHelp::_update_doc() {
 		if (sort_methods)
 			methods.sort();
 
-		section_line.push_back(Pair<String, int>(TTR("Public Methods"), class_desc->get_line_count() - 2));
+		section_line.push_back(Pair<String, int>(TTR("Methods"), class_desc->get_line_count() - 2));
 		class_desc->push_color(title_color);
 		class_desc->push_font(doc_title_font);
-		class_desc->add_text(TTR("Public Methods:"));
+		class_desc->add_text(TTR("Methods:"));
 		class_desc->pop();
 		class_desc->pop();
 
@@ -1004,21 +1026,19 @@ void EditorHelp::_update_doc() {
 		class_desc->add_newline();
 	}
 
+	// Theme properties
 	if (cd.theme_properties.size()) {
 
-		section_line.push_back(Pair<String, int>(TTR("GUI Theme Items"), class_desc->get_line_count() - 2));
+		section_line.push_back(Pair<String, int>(TTR("Theme Properties"), class_desc->get_line_count() - 2));
 		class_desc->push_color(title_color);
 		class_desc->push_font(doc_title_font);
-		class_desc->add_text(TTR("GUI Theme Items:"));
+		class_desc->add_text(TTR("Theme Properties:"));
 		class_desc->pop();
 		class_desc->pop();
-		// class_desc->add_newline();
 
 		class_desc->push_indent(1);
 		class_desc->push_table(2);
 		class_desc->set_table_column_expand(1, 1);
-
-		//class_desc->add_newline();
 
 		for (int i = 0; i < cd.theme_properties.size(); i++) {
 
@@ -1056,6 +1076,7 @@ void EditorHelp::_update_doc() {
 		class_desc->add_newline();
 	}
 
+	// Signals
 	if (cd.signals.size()) {
 
 		if (sort_methods) {
@@ -1124,6 +1145,7 @@ void EditorHelp::_update_doc() {
 		class_desc->add_newline();
 	}
 
+	// Constants and enums
 	if (cd.constants.size()) {
 
 		Map<String, Vector<DocData::ConstantDoc> > enums;
@@ -1143,6 +1165,7 @@ void EditorHelp::_update_doc() {
 			}
 		}
 
+		// Enums
 		if (enums.size()) {
 
 			section_line.push_back(Pair<String, int>(TTR("Enumerations"), class_desc->get_line_count() - 2));
@@ -1225,6 +1248,7 @@ void EditorHelp::_update_doc() {
 			class_desc->add_newline();
 		}
 
+		// Constants
 		if (constants.size()) {
 
 			section_line.push_back(Pair<String, int>(TTR("Constants"), class_desc->get_line_count() - 2));
@@ -1283,13 +1307,14 @@ void EditorHelp::_update_doc() {
 		}
 	}
 
+	// Class description
 	if (cd.description != "") {
 
-		section_line.push_back(Pair<String, int>(TTR("Description"), class_desc->get_line_count() - 2));
+		section_line.push_back(Pair<String, int>(TTR("Class Description"), class_desc->get_line_count() - 2));
 		description_line = class_desc->get_line_count() - 2;
 		class_desc->push_color(title_color);
 		class_desc->push_font(doc_title_font);
-		class_desc->add_text(TTR("Description:"));
+		class_desc->add_text(TTR("Class Description:"));
 		class_desc->pop();
 		class_desc->pop();
 
@@ -1306,8 +1331,8 @@ void EditorHelp::_update_doc() {
 		class_desc->add_newline();
 	}
 
+	// Online tutorials
 	{
-
 		class_desc->push_color(title_color);
 		class_desc->push_font(doc_title_font);
 		class_desc->add_text(TTR("Online Tutorials:"));
@@ -1345,12 +1370,14 @@ void EditorHelp::_update_doc() {
 		class_desc->add_newline();
 		class_desc->add_newline();
 	}
+
+	// Property descriptions
 	if (property_descr) {
 
-		section_line.push_back(Pair<String, int>(TTR("Properties"), class_desc->get_line_count() - 2));
+		section_line.push_back(Pair<String, int>(TTR("Property Descriptions"), class_desc->get_line_count() - 2));
 		class_desc->push_color(title_color);
 		class_desc->push_font(doc_title_font);
-		class_desc->add_text(TTR("Property Description:"));
+		class_desc->add_text(TTR("Property Descriptions:"));
 		class_desc->pop();
 		class_desc->pop();
 
@@ -1438,12 +1465,13 @@ void EditorHelp::_update_doc() {
 		}
 	}
 
+	// Method descriptions
 	if (method_descr) {
 
-		section_line.push_back(Pair<String, int>(TTR("Methods"), class_desc->get_line_count() - 2));
+		section_line.push_back(Pair<String, int>(TTR("Method Descriptions"), class_desc->get_line_count() - 2));
 		class_desc->push_color(title_color);
 		class_desc->push_font(doc_title_font);
-		class_desc->add_text(TTR("Method Description:"));
+		class_desc->add_text(TTR("Method Descriptions:"));
 		class_desc->pop();
 		class_desc->pop();
 

@@ -36,6 +36,7 @@
 #include "bullet_utilities.h"
 #include "shape_owner_bullet.h"
 
+#include <BulletCollision/CollisionDispatch/btInternalEdgeUtility.h>
 #include <BulletCollision/CollisionShapes/btConvexPointCloudShape.h>
 #include <BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h>
 #include <btBulletCollisionCommon.h>
@@ -340,6 +341,9 @@ void ConvexPolygonShapeBullet::setup(const Vector<Vector3> &p_vertices) {
 }
 
 btCollisionShape *ConvexPolygonShapeBullet::create_bt_shape(const btVector3 &p_implicit_scale, real_t p_extra_edge) {
+	if (!vertices.size())
+		// This is necessary since 0 vertices
+		return prepare(ShapeBullet::create_shape_empty());
 	btCollisionShape *cs(ShapeBullet::create_shape_convex(vertices));
 	cs->setLocalScaling(p_implicit_scale);
 	prepare(cs);
@@ -355,7 +359,8 @@ ConcavePolygonShapeBullet::ConcavePolygonShapeBullet() :
 ConcavePolygonShapeBullet::~ConcavePolygonShapeBullet() {
 	if (meshShape) {
 		delete meshShape->getMeshInterface();
-		delete meshShape;
+		delete meshShape->getTriangleInfoMap();
+		bulletdelete(meshShape);
 	}
 	faces = PoolVector<Vector3>();
 }
@@ -377,6 +382,7 @@ void ConcavePolygonShapeBullet::setup(PoolVector<Vector3> p_faces) {
 	if (meshShape) {
 		/// Clear previous created shape
 		delete meshShape->getMeshInterface();
+		delete meshShape->getTriangleInfoMap();
 		bulletdelete(meshShape);
 	}
 	int src_face_count = faces.size();
@@ -404,6 +410,8 @@ void ConcavePolygonShapeBullet::setup(PoolVector<Vector3> p_faces) {
 		const bool useQuantizedAabbCompression = true;
 
 		meshShape = bulletnew(btBvhTriangleMeshShape(shapeInterface, useQuantizedAabbCompression));
+		btTriangleInfoMap *triangleInfoMap = new btTriangleInfoMap();
+		btGenerateInternalEdgeInfo(meshShape, triangleInfoMap);
 	} else {
 		meshShape = NULL;
 		ERR_PRINT("The faces count are 0, the mesh shape cannot be created");

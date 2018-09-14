@@ -30,37 +30,44 @@
 
 #include "main.h"
 
-#include "app_icon.gen.h"
+#include "core/input_map.h"
+#include "core/io/file_access_network.h"
+#include "core/io/file_access_pack.h"
+#include "core/io/file_access_zip.h"
+#include "core/io/ip.h"
+#include "core/io/resource_loader.h"
+#include "core/io/stream_peer_ssl.h"
+#include "core/io/stream_peer_tcp.h"
+#include "core/message_queue.h"
+#include "core/os/dir_access.h"
+#include "core/os/os.h"
+#include "core/project_settings.h"
 #include "core/register_core_types.h"
+#include "core/script_debugger_local.h"
+#include "core/script_debugger_remote.h"
+#include "core/script_language.h"
+#include "core/translation.h"
+#include "core/version.h"
+#include "core/version_hash.gen.h"
 #include "drivers/register_driver_types.h"
-#include "message_queue.h"
+#include "main/app_icon.gen.h"
+#include "main/input_default.h"
+#include "main/performance.h"
+#include "main/splash.gen.h"
+#include "main/splash_editor.gen.h"
+#include "main/tests/test_main.h"
+#include "main/timer_sync.h"
 #include "modules/register_module_types.h"
-#include "os/os.h"
 #include "platform/register_platform_apis.h"
-#include "project_settings.h"
-#include "scene/register_scene_types.h"
-#include "script_debugger_local.h"
-#include "script_debugger_remote.h"
-#include "servers/register_server_types.h"
-#include "splash.gen.h"
-#include "splash_editor.gen.h"
-
-#include "input_map.h"
-#include "io/resource_loader.h"
 #include "scene/main/scene_tree.h"
+#include "scene/main/viewport.h"
+#include "scene/register_scene_types.h"
+#include "scene/resources/packed_scene.h"
 #include "servers/arvr_server.h"
 #include "servers/audio_server.h"
 #include "servers/physics_2d_server.h"
 #include "servers/physics_server.h"
-
-#include "io/resource_loader.h"
-#include "script_language.h"
-
-#include "core/io/ip.h"
-#include "main/tests/test_main.h"
-#include "os/dir_access.h"
-#include "scene/main/viewport.h"
-#include "scene/resources/packed_scene.h"
+#include "servers/register_server_types.h"
 
 #ifdef TOOLS_ENABLED
 #include "editor/doc/doc_data.h"
@@ -68,21 +75,6 @@
 #include "editor/editor_node.h"
 #include "editor/project_manager.h"
 #endif
-
-#include "io/file_access_network.h"
-#include "servers/physics_2d_server.h"
-
-#include "core/io/file_access_pack.h"
-#include "core/io/file_access_zip.h"
-#include "core/io/stream_peer_ssl.h"
-#include "core/io/stream_peer_tcp.h"
-#include "main/input_default.h"
-#include "performance.h"
-#include "translation.h"
-#include "version.h"
-#include "version_hash.gen.h"
-
-#include "main/timer_sync.h"
 
 static ProjectSettings *globals = NULL;
 static Engine *engine = NULL;
@@ -830,6 +822,9 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		video_driver = GLOBAL_GET("rendering/quality/driver/driver_name");
 	}
 
+	GLOBAL_DEF("rendering/quality/driver/driver_fallback", "Best");
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/quality/driver/driver_fallback", PropertyInfo(Variant::STRING, "rendering/quality/driver/driver_fallback", PROPERTY_HINT_ENUM, "Best,Never"));
+
 	GLOBAL_DEF("display/window/size/width", 1024);
 	GLOBAL_DEF("display/window/size/height", 600);
 	GLOBAL_DEF("display/window/size/resizable", true);
@@ -1040,6 +1035,7 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	if (err != OK) {
 		return err;
 	}
+
 	if (init_use_custom_pos) {
 		OS::get_singleton()->set_window_position(init_custom_pos);
 	}
@@ -1689,6 +1685,7 @@ bool Main::start() {
 #ifdef TOOLS_ENABLED
 		if (project_manager || (script == "" && test == "" && game_path == "" && !editor)) {
 
+			Engine::get_singleton()->set_editor_hint(true);
 			ProjectManager *pmanager = memnew(ProjectManager);
 			ProgressDialog *progress_dialog = memnew(ProgressDialog);
 			pmanager->add_child(progress_dialog);

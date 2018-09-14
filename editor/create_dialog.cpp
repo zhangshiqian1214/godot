@@ -30,12 +30,12 @@
 
 #include "create_dialog.h"
 
-#include "class_db.h"
+#include "core/class_db.h"
+#include "core/os/keyboard.h"
+#include "core/print_string.h"
 #include "editor_help.h"
 #include "editor_node.h"
 #include "editor_settings.h"
-#include "os/keyboard.h"
-#include "print_string.h"
 #include "scene/gui/box_container.h"
 
 void CreateDialog::popup_create(bool p_dont_clear, bool p_replace_mode) {
@@ -244,17 +244,17 @@ void CreateDialog::add_type(const String &p_type, HashMap<String, TreeItem *> &p
 		bool is_search_subsequence = search_box->get_text().is_subsequence_ofi(p_type);
 		String to_select_type = *to_select ? (*to_select)->get_text(0) : "";
 		to_select_type = to_select_type.split(" ")[0];
-		bool current_item_is_preffered;
+		bool current_item_is_preferred;
 		if (cpp_type) {
-			current_item_is_preffered = ClassDB::is_parent_class(p_type, preferred_search_result_type) && !ClassDB::is_parent_class(to_select_type, preferred_search_result_type);
+			current_item_is_preferred = ClassDB::is_parent_class(p_type, preferred_search_result_type) && !ClassDB::is_parent_class(to_select_type, preferred_search_result_type) && search_box->get_text() != to_select_type;
 		} else {
-			current_item_is_preffered = ed.script_class_is_parent(p_type, preferred_search_result_type) && !ed.script_class_is_parent(to_select_type, preferred_search_result_type);
+			current_item_is_preferred = ed.script_class_is_parent(p_type, preferred_search_result_type) && !ed.script_class_is_parent(to_select_type, preferred_search_result_type) && search_box->get_text() != to_select_type;
 		}
 		if (*to_select && p_type.length() < (*to_select)->get_text(0).length()) {
-			current_item_is_preffered = true;
+			current_item_is_preferred = true;
 		}
 
-		if (((!*to_select || current_item_is_preffered) && is_search_subsequence) || search_box->get_text() == p_type) {
+		if (((!*to_select || current_item_is_preferred) && is_search_subsequence) || search_box->get_text() == p_type) {
 			*to_select = item;
 		}
 	}
@@ -497,7 +497,11 @@ Object *CreateDialog::instance_selected() {
 
 		if (custom != String()) {
 			if (ScriptServer::is_global_class(custom)) {
-				return EditorNode::get_editor_data().script_class_instance(custom);
+				Object *obj = EditorNode::get_editor_data().script_class_instance(custom);
+				Node *n = Object::cast_to<Node>(obj);
+				if (n)
+					n->set_name(custom);
+				return obj;
 			}
 			return EditorNode::get_editor_data().instance_custom_type(selected->get_text(0), custom);
 		} else {

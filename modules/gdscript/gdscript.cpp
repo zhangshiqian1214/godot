@@ -30,13 +30,13 @@
 
 #include "gdscript.h"
 
-#include "engine.h"
+#include "core/engine.h"
+#include "core/global_constants.h"
+#include "core/io/file_access_encrypted.h"
+#include "core/os/file_access.h"
+#include "core/os/os.h"
+#include "core/project_settings.h"
 #include "gdscript_compiler.h"
-#include "global_constants.h"
-#include "io/file_access_encrypted.h"
-#include "os/file_access.h"
-#include "os/os.h"
-#include "project_settings.h"
 
 ///////////////////////////
 
@@ -1973,14 +1973,14 @@ String GDScriptWarning::get_message() const {
 		} break;
 		case UNSAFE_CAST: {
 			CHECK_SYMBOLS(1);
-			return "The value is cast to '" + symbols[0] + "' but has an unkown type.";
+			return "The value is cast to '" + symbols[0] + "' but has an unknown type.";
 		} break;
 		case UNSAFE_CALL_ARGUMENT: {
 			CHECK_SYMBOLS(4);
 			return "The argument '" + symbols[0] + "' of the function '" + symbols[1] + "' requires a the subtype '" + symbols[2] + "' but the supertype '" + symbols[3] + "' was provided";
 		} break;
 	}
-	ERR_EXPLAIN("Invalid GDScript waring code: " + get_name_from_code(code));
+	ERR_EXPLAIN("Invalid GDScript warning code: " + get_name_from_code(code));
 	ERR_FAIL_V(String());
 
 #undef CHECK_SYMBOLS
@@ -2031,7 +2031,7 @@ GDScriptWarning::Code GDScriptWarning::get_code_from_name(const String &p_name) 
 		}
 	}
 
-	ERR_EXPLAIN("Invalid GDScript waring name: " + p_name);
+	ERR_EXPLAIN("Invalid GDScript warning name: " + p_name);
 	ERR_FAIL_V(WARNING_MAX);
 }
 
@@ -2112,23 +2112,14 @@ RES ResourceFormatLoaderGDScript::load(const String &p_path, const String &p_ori
 		script->set_script_path(p_original_path); // script needs this.
 		script->set_path(p_original_path);
 		Error err = script->load_byte_code(p_path);
-
-		if (err != OK) {
-			memdelete(script);
-			ERR_FAIL_COND_V(err != OK, RES());
-		}
+		ERR_FAIL_COND_V(err != OK, RES());
 
 	} else {
 		Error err = script->load_source_code(p_path);
-
-		if (err != OK) {
-			memdelete(script);
-			ERR_FAIL_COND_V(err != OK, RES());
-		}
+		ERR_FAIL_COND_V(err != OK, RES());
 
 		script->set_script_path(p_original_path); // script needs this.
 		script->set_path(p_original_path);
-		//script->set_name(p_path.get_file());
 
 		script->reload();
 	}

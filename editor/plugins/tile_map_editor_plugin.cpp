@@ -31,10 +31,10 @@
 #include "tile_map_editor_plugin.h"
 
 #include "canvas_item_editor_plugin.h"
+#include "core/os/input.h"
+#include "core/os/keyboard.h"
 #include "editor/editor_scale.h"
 #include "editor/editor_settings.h"
-#include "os/input.h"
-#include "os/keyboard.h"
 #include "scene/gui/split_container.h"
 
 void TileMapEditor::_notification(int p_what) {
@@ -238,8 +238,8 @@ void TileMapEditor::_create_set_cell_undo(const Vector2 &p_vec, const CellOp &p_
 	cell_new["transpose"] = p_cell_new.tr;
 	cell_new["auto_coord"] = p_cell_new.ac;
 
-	undo_redo->add_undo_method(node, "set_celld", p_vec, cell_old);
-	undo_redo->add_do_method(node, "set_celld", p_vec, cell_new);
+	undo_redo->add_undo_method(node, "_set_celld", p_vec, cell_old);
+	undo_redo->add_do_method(node, "_set_celld", p_vec, cell_new);
 }
 
 void TileMapEditor::_start_undo(const String &p_action) {
@@ -457,36 +457,38 @@ void TileMapEditor::_update_palette() {
 		palette->select(0);
 	}
 
-	if ((manual_autotile && tileset->tile_get_tile_mode(sel_tile) == TileSet::AUTO_TILE) || tileset->tile_get_tile_mode(sel_tile) == TileSet::ATLAS_TILE) {
+	if (sel_tile != TileMap::INVALID_CELL) {
+		if ((manual_autotile && tileset->tile_get_tile_mode(sel_tile) == TileSet::AUTO_TILE) || tileset->tile_get_tile_mode(sel_tile) == TileSet::ATLAS_TILE) {
 
-		const Map<Vector2, uint16_t> &tiles = tileset->autotile_get_bitmask_map(sel_tile);
+			const Map<Vector2, uint16_t> &tiles = tileset->autotile_get_bitmask_map(sel_tile);
 
-		Vector<Vector2> entries;
-		for (const Map<Vector2, uint16_t>::Element *E = tiles.front(); E; E = E->next()) {
-			entries.push_back(E->key());
-		}
-		entries.sort();
-
-		Ref<Texture> tex = tileset->tile_get_texture(sel_tile);
-
-		for (int i = 0; i < entries.size(); i++) {
-
-			manual_palette->add_item(String());
-
-			if (tex.is_valid()) {
-
-				Rect2 region = tileset->tile_get_region(sel_tile);
-				int spacing = tileset->autotile_get_spacing(sel_tile);
-				region.size = tileset->autotile_get_size(sel_tile); // !!
-				region.position += (region.size + Vector2(spacing, spacing)) * entries[i];
-
-				if (!region.has_no_area())
-					manual_palette->set_item_icon_region(manual_palette->get_item_count() - 1, region);
-
-				manual_palette->set_item_icon(manual_palette->get_item_count() - 1, tex);
+			Vector<Vector2> entries;
+			for (const Map<Vector2, uint16_t>::Element *E = tiles.front(); E; E = E->next()) {
+				entries.push_back(E->key());
 			}
+			entries.sort();
 
-			manual_palette->set_item_metadata(manual_palette->get_item_count() - 1, entries[i]);
+			Ref<Texture> tex = tileset->tile_get_texture(sel_tile);
+
+			for (int i = 0; i < entries.size(); i++) {
+
+				manual_palette->add_item(String());
+
+				if (tex.is_valid()) {
+
+					Rect2 region = tileset->tile_get_region(sel_tile);
+					int spacing = tileset->autotile_get_spacing(sel_tile);
+					region.size = tileset->autotile_get_size(sel_tile); // !!
+					region.position += (region.size + Vector2(spacing, spacing)) * entries[i];
+
+					if (!region.has_no_area())
+						manual_palette->set_item_icon_region(manual_palette->get_item_count() - 1, region);
+
+					manual_palette->set_item_icon(manual_palette->get_item_count() - 1, tex);
+				}
+
+				manual_palette->set_item_metadata(manual_palette->get_item_count() - 1, entries[i]);
+			}
 		}
 	}
 

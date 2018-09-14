@@ -30,9 +30,9 @@
 
 #include "gdscript_function.h"
 
+#include "core/os/os.h"
 #include "gdscript.h"
 #include "gdscript_functions.h"
-#include "os/os.h"
 
 Variant *GDScriptFunction::_get_variant(int p_address, GDScriptInstance *p_instance, GDScript *p_script, Variant &self, Variant *p_stack, String &r_error) const {
 
@@ -191,6 +191,7 @@ static String _get_var_type(const Variant *p_type) {
 	static const void *switch_table_ops[] = { \
 		&&OPCODE_OPERATOR,                    \
 		&&OPCODE_EXTENDS_TEST,                \
+		&&OPCODE_IS_BUILTIN,                  \
 		&&OPCODE_SET,                         \
 		&&OPCODE_GET,                         \
 		&&OPCODE_SET_NAMED,                   \
@@ -532,6 +533,21 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				}
 
 				*dst = extends_ok;
+				ip += 4;
+			}
+			DISPATCH_OPCODE;
+
+			OPCODE(OPCODE_IS_BUILTIN) {
+
+				CHECK_SPACE(4);
+
+				GET_VARIANT_PTR(value, 1);
+				Variant::Type var_type = (Variant::Type)_code_ptr[ip + 2];
+				GET_VARIANT_PTR(dst, 3);
+
+				GD_ERR_BREAK(var_type < 0 || var_type >= Variant::VARIANT_MAX);
+
+				*dst = value->get_type() == var_type;
 				ip += 4;
 			}
 			DISPATCH_OPCODE;

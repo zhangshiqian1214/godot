@@ -30,16 +30,16 @@
 
 #include "editor_file_system.h"
 
+#include "core/io/resource_import.h"
+#include "core/io/resource_loader.h"
+#include "core/io/resource_saver.h"
+#include "core/os/file_access.h"
+#include "core/os/os.h"
+#include "core/project_settings.h"
+#include "core/variant_parser.h"
 #include "editor_node.h"
 #include "editor_resource_preview.h"
 #include "editor_settings.h"
-#include "io/resource_import.h"
-#include "io/resource_loader.h"
-#include "io/resource_saver.h"
-#include "os/file_access.h"
-#include "os/os.h"
-#include "project_settings.h"
-#include "variant_parser.h"
 
 EditorFileSystem *EditorFileSystem::singleton = NULL;
 
@@ -389,7 +389,7 @@ bool EditorFileSystem::_test_for_reimport(const String &p_path, bool p_only_impo
 
 	memdelete(f);
 
-	// Read the md5's from a separate file (so the import parameters aren't dependant on the file version
+	// Read the md5's from a separate file (so the import parameters aren't dependent on the file version
 	String base_path = ResourceFormatImporter::get_singleton()->get_import_base_path(p_path);
 	FileAccess *md5s = FileAccess::open(base_path + ".md5", FileAccess::READ, &err);
 	if (!md5s) { // No md5's stored for this resource
@@ -1479,12 +1479,16 @@ void EditorFileSystem::_reimport_file(const String &p_file) {
 		cf.instance();
 		Error err = cf->load(p_file + ".import");
 		if (err == OK) {
-			List<String> sk;
-			cf->get_section_keys("params", &sk);
-			for (List<String>::Element *E = sk.front(); E; E = E->next()) {
-				params[E->get()] = cf->get_value("params", E->get());
+			if (cf->has_section("params")) {
+				List<String> sk;
+				cf->get_section_keys("params", &sk);
+				for (List<String>::Element *E = sk.front(); E; E = E->next()) {
+					params[E->get()] = cf->get_value("params", E->get());
+				}
 			}
-			importer_name = cf->get_value("remap", "importer");
+			if (cf->has_section("remap")) {
+				importer_name = cf->get_value("remap", "importer");
+			}
 		}
 
 	} else {

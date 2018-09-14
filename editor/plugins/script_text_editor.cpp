@@ -30,10 +30,10 @@
 
 #include "script_text_editor.h"
 
+#include "core/os/keyboard.h"
 #include "editor/editor_node.h"
 #include "editor/editor_settings.h"
 #include "editor/script_editor_debugger.h"
-#include "os/keyboard.h"
 
 Vector<String> ScriptTextEditor::get_functions() {
 
@@ -1256,7 +1256,7 @@ void ScriptTextEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 					int to_column = tx->get_selection_to_column();
 
 					if (row < from_line || row > to_line || (row == from_line && col < from_column) || (row == to_line && col > to_column)) {
-						// Right click is outside the seleted text
+						// Right click is outside the selected text
 						tx->deselect();
 					}
 				}
@@ -1475,9 +1475,9 @@ ScriptTextEditor::ScriptTextEditor() {
 	convert_case->set_name("convert_case");
 	edit_menu->get_popup()->add_child(convert_case);
 	edit_menu->get_popup()->add_submenu_item(TTR("Convert Case"), "convert_case");
-	convert_case->add_shortcut(ED_SHORTCUT("script_text_editor/convert_to_uppercase", TTR("Uppercase")), EDIT_TO_UPPERCASE);
-	convert_case->add_shortcut(ED_SHORTCUT("script_text_editor/convert_to_lowercase", TTR("Lowercase")), EDIT_TO_LOWERCASE);
-	convert_case->add_shortcut(ED_SHORTCUT("script_text_editor/capitalize", TTR("Capitalize")), EDIT_CAPITALIZE);
+	convert_case->add_shortcut(ED_SHORTCUT("script_text_editor/convert_to_uppercase", TTR("Uppercase"), KEY_MASK_SHIFT | KEY_F4), EDIT_TO_UPPERCASE);
+	convert_case->add_shortcut(ED_SHORTCUT("script_text_editor/convert_to_lowercase", TTR("Lowercase"), KEY_MASK_SHIFT | KEY_F5), EDIT_TO_LOWERCASE);
+	convert_case->add_shortcut(ED_SHORTCUT("script_text_editor/capitalize", TTR("Capitalize"), KEY_MASK_SHIFT | KEY_F6), EDIT_CAPITALIZE);
 	convert_case->connect("id_pressed", this, "_edit_option");
 
 	highlighters["Standard"] = NULL;
@@ -1549,13 +1549,14 @@ void ScriptTextEditor::register_editor() {
 	ED_SHORTCUT("script_text_editor/unfold_all_lines", TTR("Unfold All Lines"), 0);
 #ifdef OSX_ENABLED
 	ED_SHORTCUT("script_text_editor/clone_down", TTR("Clone Down"), KEY_MASK_SHIFT | KEY_MASK_CMD | KEY_C);
+	ED_SHORTCUT("script_text_editor/complete_symbol", TTR("Complete Symbol"), KEY_MASK_CTRL | KEY_SPACE);
 #else
 	ED_SHORTCUT("script_text_editor/clone_down", TTR("Clone Down"), KEY_MASK_CMD | KEY_B);
-#endif
 	ED_SHORTCUT("script_text_editor/complete_symbol", TTR("Complete Symbol"), KEY_MASK_CMD | KEY_SPACE);
+#endif
 	ED_SHORTCUT("script_text_editor/trim_trailing_whitespace", TTR("Trim Trailing Whitespace"), KEY_MASK_CMD | KEY_MASK_ALT | KEY_T);
 	ED_SHORTCUT("script_text_editor/convert_indent_to_spaces", TTR("Convert Indent To Spaces"), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_Y);
-	ED_SHORTCUT("script_text_editor/convert_indent_to_tabs", TTR("Convert Indent To Tabs"), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_X);
+	ED_SHORTCUT("script_text_editor/convert_indent_to_tabs", TTR("Convert Indent To Tabs"), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_I);
 	ED_SHORTCUT("script_text_editor/auto_indent", TTR("Auto Indent"), KEY_MASK_CMD | KEY_I);
 
 #ifdef OSX_ENABLED
@@ -1567,23 +1568,24 @@ void ScriptTextEditor::register_editor() {
 	ED_SHORTCUT("script_text_editor/goto_next_breakpoint", TTR("Goto Next Breakpoint"), KEY_MASK_CMD | KEY_PERIOD);
 	ED_SHORTCUT("script_text_editor/goto_previous_breakpoint", TTR("Goto Previous Breakpoint"), KEY_MASK_CMD | KEY_COMMA);
 
-	ED_SHORTCUT("script_text_editor/convert_to_uppercase", TTR("Convert To Uppercase"), KEY_MASK_SHIFT | KEY_F4);
-	ED_SHORTCUT("script_text_editor/convert_to_lowercase", TTR("Convert To Lowercase"), KEY_MASK_SHIFT | KEY_F3);
-	ED_SHORTCUT("script_text_editor/capitalize", TTR("Capitalize"), KEY_MASK_SHIFT | KEY_F2);
-
 	ED_SHORTCUT("script_text_editor/find", TTR("Find..."), KEY_MASK_CMD | KEY_F);
 #ifdef OSX_ENABLED
 	ED_SHORTCUT("script_text_editor/find_next", TTR("Find Next"), KEY_MASK_CMD | KEY_G);
 	ED_SHORTCUT("script_text_editor/find_previous", TTR("Find Previous"), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_G);
+	ED_SHORTCUT("script_text_editor/replace", TTR("Replace..."), KEY_MASK_ALT | KEY_MASK_CMD | KEY_F);
 #else
 	ED_SHORTCUT("script_text_editor/find_next", TTR("Find Next"), KEY_F3);
 	ED_SHORTCUT("script_text_editor/find_previous", TTR("Find Previous"), KEY_MASK_SHIFT | KEY_F3);
-#endif
 	ED_SHORTCUT("script_text_editor/replace", TTR("Replace..."), KEY_MASK_CMD | KEY_R);
+#endif
 
 	ED_SHORTCUT("script_text_editor/find_in_files", TTR("Find in files..."), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_F);
 
+#ifdef OSX_ENABLED
+	ED_SHORTCUT("script_text_editor/goto_function", TTR("Goto Function..."), KEY_MASK_CTRL | KEY_MASK_CMD | KEY_J);
+#else
 	ED_SHORTCUT("script_text_editor/goto_function", TTR("Goto Function..."), KEY_MASK_ALT | KEY_MASK_CMD | KEY_F);
+#endif
 	ED_SHORTCUT("script_text_editor/goto_line", TTR("Goto Line..."), KEY_MASK_CMD | KEY_L);
 
 #ifdef OSX_ENABLED

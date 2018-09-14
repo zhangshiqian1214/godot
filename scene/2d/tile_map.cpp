@@ -30,9 +30,9 @@
 
 #include "tile_map.h"
 
-#include "io/marshalls.h"
-#include "method_bind_ext.gen.inc"
-#include "os/os.h"
+#include "core/io/marshalls.h"
+#include "core/method_bind_ext.gen.inc"
+#include "core/os/os.h"
 #include "servers/physics_2d_server.h"
 
 int TileMap::_get_quadrant_size() const {
@@ -726,7 +726,7 @@ void TileMap::set_cellv(const Vector2 &p_pos, int p_tile, bool p_flip_x, bool p_
 	set_cell(p_pos.x, p_pos.y, p_tile, p_flip_x, p_flip_y, p_transpose);
 }
 
-void TileMap::set_celld(const Vector2 &p_pos, const Dictionary &p_data) {
+void TileMap::_set_celld(const Vector2 &p_pos, const Dictionary &p_data) {
 
 	set_cell(p_pos.x, p_pos.y, p_data["id"], p_data["flip_h"], p_data["flip_y"], p_data["transpose"], p_data["auto_coord"]);
 }
@@ -1612,7 +1612,7 @@ void TileMap::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_cell", "x", "y", "tile", "flip_x", "flip_y", "transpose", "autotile_coord"), &TileMap::set_cell, DEFVAL(false), DEFVAL(false), DEFVAL(false), DEFVAL(Vector2()));
 	ClassDB::bind_method(D_METHOD("set_cellv", "position", "tile", "flip_x", "flip_y", "transpose"), &TileMap::set_cellv, DEFVAL(false), DEFVAL(false), DEFVAL(false));
-	ClassDB::bind_method(D_METHOD("set_celld", "position", "data"), &TileMap::set_celld);
+	ClassDB::bind_method(D_METHOD("_set_celld", "position", "data"), &TileMap::_set_celld);
 	ClassDB::bind_method(D_METHOD("get_cell", "x", "y"), &TileMap::get_cell);
 	ClassDB::bind_method(D_METHOD("get_cellv", "position"), &TileMap::get_cellv);
 	ClassDB::bind_method(D_METHOD("is_cell_x_flipped", "x", "y"), &TileMap::is_cell_x_flipped);

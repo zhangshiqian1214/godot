@@ -29,8 +29,9 @@
 /*************************************************************************/
 
 #include "quat.h"
-#include "matrix3.h"
-#include "print_string.h"
+
+#include "core/math/matrix3.h"
+#include "core/print_string.h"
 
 // set_euler_xyz expects a vector containing the Euler angles in the format
 // (ax,ay,az), where ax is the angle of rotation around x axis,
@@ -134,7 +135,7 @@ Quat Quat::normalized() const {
 }
 
 bool Quat::is_normalized() const {
-	return Math::is_equal_approx(length(), 1.0);
+	return Math::is_equal_approx(length_squared(), 1.0);
 }
 
 Quat Quat::inverse() const {

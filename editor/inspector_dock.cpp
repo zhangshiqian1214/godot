@@ -36,6 +36,12 @@
 
 void InspectorDock::_menu_option(int p_option) {
 	switch (p_option) {
+		case EXPAND_ALL: {
+			_menu_expandall();
+		} break;
+		case COLLAPSE_ALL: {
+			_menu_collapseall();
+		} break;
 		case RESOURCE_MAKE_BUILT_IN: {
 			_unref_resource();
 		} break;
@@ -399,8 +405,8 @@ void InspectorDock::update(Object *p_object) {
 	PopupMenu *p = object_menu->get_popup();
 
 	p->clear();
-	p->add_shortcut(ED_SHORTCUT("property_editor/expand_all", TTR("Expand all properties")), EXPAND_ALL);
-	p->add_shortcut(ED_SHORTCUT("property_editor/collapse_all", TTR("Collapse all properties")), COLLAPSE_ALL);
+	p->add_shortcut(ED_SHORTCUT("property_editor/expand_all", TTR("Expand All Properties")), EXPAND_ALL);
+	p->add_shortcut(ED_SHORTCUT("property_editor/collapse_all", TTR("Collapse All Properties")), COLLAPSE_ALL);
 	p->add_separator();
 	if (is_resource) {
 		p->add_item(TTR("Save"), RESOURCE_SAVE);

@@ -30,13 +30,13 @@
 
 #include "visual_script_property_selector.h"
 
+#include "core/os/keyboard.h"
 #include "editor_scale.h"
 #include "modules/visual_script/visual_script.h"
 #include "modules/visual_script/visual_script_builtin_funcs.h"
 #include "modules/visual_script/visual_script_flow_control.h"
 #include "modules/visual_script/visual_script_func_nodes.h"
 #include "modules/visual_script/visual_script_nodes.h"
-#include "os/keyboard.h"
 #include "scene/main/node.h"
 #include "scene/main/viewport.h"
 
@@ -191,10 +191,10 @@ void VisualScriptPropertySelector::_update_search() {
 			if (type_filter.size() && type_filter.find(E->get().type) == -1)
 				continue;
 
-			String get_text_raw = String(TTR("Get")) + String(" ") + E->get().name;
+			String get_text_raw = String(vformat(TTR("Get %s"), E->get().name));
 			String get_text = get_text_raw.capitalize();
 
-			String set_text_raw = String(TTR("Set ")) + String(" ") + E->get().name;
+			String set_text_raw = String(vformat(TTR("Set %s"), E->get().name));
 			String set_text = set_text_raw.capitalize();
 			String input = search_box->get_text().capitalize();
 			if (input == String() ||

@@ -32,14 +32,13 @@
 
 #include "core/core_string_names.h"
 #include "core/engine.h"
+#include "core/io/resource_loader.h"
+#include "core/os/file_access.h"
+#include "core/print_string.h"
 #include "core/project_settings.h"
 #include "core/reference.h"
+#include "core/script_language.h"
 #include "gdscript.h"
-#include "io/resource_loader.h"
-#include "os/file_access.h"
-#include "print_string.h"
-#include "project_settings.h"
-#include "script_language.h"
 
 template <class T>
 T *GDScriptParser::alloc_node() {
@@ -861,6 +860,20 @@ GDScriptParser::Node *GDScriptParser::_parse_expression(Node *p_parent, bool p_s
 			op->arguments.push_back(subexpr);
 			expr=op;*/
 
+		} else if (tokenizer->get_token() == GDScriptTokenizer::TK_PR_IS && tokenizer->get_token(1) == GDScriptTokenizer::TK_BUILT_IN_TYPE) {
+			// 'is' operator with built-in type
+			OperatorNode *op = alloc_node<OperatorNode>();
+			op->op = OperatorNode::OP_IS_BUILTIN;
+			op->arguments.push_back(expr);
+
+			tokenizer->advance();
+
+			TypeNode *tn = alloc_node<TypeNode>();
+			tn->vtype = tokenizer->get_token_type();
+			op->arguments.push_back(tn);
+			tokenizer->advance();
+
+			expr = op;
 		} else if (tokenizer->get_token() == GDScriptTokenizer::TK_BRACKET_OPEN) {
 			// array
 			tokenizer->advance();
@@ -1071,6 +1084,15 @@ GDScriptParser::Node *GDScriptParser::_parse_expression(Node *p_parent, bool p_s
 
 			expr = op;
 
+		} else if (tokenizer->get_token() == GDScriptTokenizer::TK_BUILT_IN_TYPE && expression.size() > 0 && expression[expression.size() - 1].is_op && expression[expression.size() - 1].op == OperatorNode::OP_IS) {
+			Expression e = expression[expression.size() - 1];
+			e.op = OperatorNode::OP_IS_BUILTIN;
+			expression.write[expression.size() - 1] = e;
+
+			TypeNode *tn = alloc_node<TypeNode>();
+			tn->vtype = tokenizer->get_token_type();
+			expr = tn;
+			tokenizer->advance();
 		} else {
 
 			//find list [ or find dictionary {
@@ -1329,6 +1351,7 @@ GDScriptParser::Node *GDScriptParser::_parse_expression(Node *p_parent, bool p_s
 			switch (expression[i].op) {
 
 				case OperatorNode::OP_IS:
+				case OperatorNode::OP_IS_BUILTIN:
 					priority = -1;
 					break; //before anything
 
@@ -2455,7 +2478,7 @@ void GDScriptParser::_generate_pattern(PatternNode *p_pattern, Node *p_node_to_m
 
 				Node *condition = NULL;
 
-				// chech for has, then for pattern
+				// check for has, then for pattern
 
 				IdentifierNode *has = alloc_node<IdentifierNode>();
 				has->name = "has";
@@ -3915,14 +3938,15 @@ void GDScriptParser::_parse_class(ClassNode *p_class) {
 
 									if (tokenizer->get_token() == GDScriptTokenizer::TK_IDENTIFIER && tokenizer->get_token_identifier() == "FLAGS") {
 
-										//current_export.hint=PROPERTY_HINT_ALL_FLAGS;
 										tokenizer->advance();
 
 										if (tokenizer->get_token() == GDScriptTokenizer::TK_PARENTHESIS_CLOSE) {
+											ERR_EXPLAIN("Exporting bit flags hint requires string constants.");
+											WARN_DEPRECATED
 											break;
 										}
 										if (tokenizer->get_token() != GDScriptTokenizer::TK_COMMA) {
-											_set_error("Expected ')' or ',' in bit flags hint.");
+											_set_error("Expected ',' in bit flags hint.");
 											return;
 										}
 
@@ -4511,14 +4535,14 @@ void GDScriptParser::_parse_class(ClassNode *p_class) {
 				member.rpc_mode = rpc_mode;
 
 				if (current_class->constant_expressions.has(member.identifier)) {
-					_set_error("A constant named '" + String(member.identifier) + "' alread exists in this class (at line: " +
+					_set_error("A constant named '" + String(member.identifier) + "' already exists in this class (at line: " +
 							   itos(current_class->constant_expressions[member.identifier].expression->line) + ").");
 					return;
 				}
 
 				for (int i = 0; i < current_class->variables.size(); i++) {
 					if (current_class->variables[i].identifier == member.identifier) {
-						_set_error("Variable '" + String(member.identifier) + "' alread exists in this class (at line: " +
+						_set_error("Variable '" + String(member.identifier) + "' already exists in this class (at line: " +
 								   itos(current_class->variables[i].line) + ").");
 						return;
 					}
@@ -4725,14 +4749,14 @@ void GDScriptParser::_parse_class(ClassNode *p_class) {
 				int line = tokenizer->get_token_line();
 
 				if (current_class->constant_expressions.has(const_id)) {
-					_set_error("Constant '" + String(const_id) + "' alread exists in this class (at line: " +
+					_set_error("Constant '" + String(const_id) + "' already exists in this class (at line: " +
 							   itos(current_class->constant_expressions[const_id].expression->line) + ").");
 					return;
 				}
 
 				for (int i = 0; i < current_class->variables.size(); i++) {
 					if (current_class->variables[i].identifier == const_id) {
-						_set_error("A variable named '" + String(const_id) + "' alread exists in this class (at line: " +
+						_set_error("A variable named '" + String(const_id) + "' already exists in this class (at line: " +
 								   itos(current_class->variables[i].line) + ").");
 						return;
 					}
@@ -4786,7 +4810,7 @@ void GDScriptParser::_parse_class(ClassNode *p_class) {
 			case GDScriptTokenizer::TK_PR_ENUM: {
 				//multiple constant declarations..
 
-				int last_assign = -1; // Incremented by 1 right before the assingment.
+				int last_assign = -1; // Incremented by 1 right before the assignment.
 				String enum_name;
 				Dictionary enum_dict;
 
@@ -5793,6 +5817,13 @@ GDScriptParser::DataType GDScriptParser::_reduce_node_type(Node *p_node) {
 		case Node::TYPE_CONSTANT: {
 			node_type = _type_from_variant(static_cast<ConstantNode *>(p_node)->value);
 		} break;
+		case Node::TYPE_TYPE: {
+			TypeNode *tn = static_cast<TypeNode *>(p_node);
+			node_type.has_type = true;
+			node_type.is_meta_type = true;
+			node_type.kind = DataType::BUILTIN;
+			node_type.builtin_type = tn->vtype;
+		} break;
 		case Node::TYPE_ARRAY: {
 			node_type.has_type = true;
 			node_type.kind = DataType::BUILTIN;
@@ -5896,7 +5927,8 @@ GDScriptParser::DataType GDScriptParser::_reduce_node_type(Node *p_node) {
 					// yield can return anything
 					node_type.has_type = false;
 				} break;
-				case OperatorNode::OP_IS: {
+				case OperatorNode::OP_IS:
+				case OperatorNode::OP_IS_BUILTIN: {
 
 					if (op->arguments.size() != 2) {
 						_set_error("Parser bug: binary operation without 2 arguments.", op->line);
@@ -5913,8 +5945,11 @@ GDScriptParser::DataType GDScriptParser::_reduce_node_type(Node *p_node) {
 						}
 						type_type.is_meta_type = false; // Test the actual type
 						if (!_is_type_compatible(type_type, value_type) && !_is_type_compatible(value_type, type_type)) {
-							// TODO: Make this a warning?
-							_set_error("A value of type '" + value_type.to_string() + "' will never be an instance of '" + type_type.to_string() + "'.", op->line);
+							if (op->op == OperatorNode::OP_IS) {
+								_set_error("A value of type '" + value_type.to_string() + "' will never be an instance of '" + type_type.to_string() + "'.", op->line);
+							} else {
+								_set_error("A value of type '" + value_type.to_string() + "' will never be of type '" + type_type.to_string() + "'.", op->line);
+							}
 							return DataType();
 						}
 					}
@@ -7207,7 +7242,7 @@ void GDScriptParser::_check_class_level_types(ClassNode *p_class) {
 						return;
 					}
 
-					// Replace assigment with implict conversion
+					// Replace assignment with implict conversion
 					BuiltInFunctionNode *convert = alloc_node<BuiltInFunctionNode>();
 					convert->line = v.line;
 					convert->function = GDScriptFunctions::TYPE_CONVERT;
@@ -7585,7 +7620,7 @@ void GDScriptParser::_check_block_types(BlockNode *p_block) {
 										lv->line);
 								return;
 							}
-							// Replace assigment with implict conversion
+							// Replace assignment with implict conversion
 							BuiltInFunctionNode *convert = alloc_node<BuiltInFunctionNode>();
 							convert->line = lv->line;
 							convert->function = GDScriptFunctions::TYPE_CONVERT;
@@ -7713,7 +7748,7 @@ void GDScriptParser::_check_block_types(BlockNode *p_block) {
 											op->line);
 									return;
 								}
-								// Replace assigment with implict conversion
+								// Replace assignment with implict conversion
 								BuiltInFunctionNode *convert = alloc_node<BuiltInFunctionNode>();
 								convert->line = op->line;
 								convert->function = GDScriptFunctions::TYPE_CONVERT;
