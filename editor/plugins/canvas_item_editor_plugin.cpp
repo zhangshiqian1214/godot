@@ -443,8 +443,12 @@ void CanvasItemEditor::_find_canvas_items_at_pos(const Point2 &p_pos, Node *p_no
 	CanvasItem *canvas_item = Object::cast_to<CanvasItem>(p_node);
 
 	for (int i = p_node->get_child_count() - 1; i >= 0; i--) {
-		if (canvas_item && !canvas_item->is_set_as_toplevel()) {
-			_find_canvas_items_at_pos(p_pos, p_node->get_child(i), r_items, p_limit, p_parent_xform * canvas_item->get_transform(), p_canvas_xform);
+		if (canvas_item) {
+			if (!canvas_item->is_set_as_toplevel()) {
+				_find_canvas_items_at_pos(p_pos, p_node->get_child(i), r_items, p_limit, p_parent_xform * canvas_item->get_transform(), p_canvas_xform);
+			} else {
+				_find_canvas_items_at_pos(p_pos, p_node->get_child(i), r_items, p_limit, canvas_item->get_transform(), p_canvas_xform);
+			}
 		} else {
 			CanvasLayer *cl = Object::cast_to<CanvasLayer>(p_node);
 			_find_canvas_items_at_pos(p_pos, p_node->get_child(i), r_items, p_limit, Transform2D(), cl ? cl->get_transform() : p_canvas_xform);
@@ -610,8 +614,12 @@ void CanvasItemEditor::_find_canvas_items_in_rect(const Rect2 &p_rect, Node *p_n
 
 	if (!lock_children || !editable) {
 		for (int i = p_node->get_child_count() - 1; i >= 0; i--) {
-			if (canvas_item && !canvas_item->is_set_as_toplevel()) {
-				_find_canvas_items_in_rect(p_rect, p_node->get_child(i), r_items, p_parent_xform * canvas_item->get_transform(), p_canvas_xform);
+			if (canvas_item) {
+				if (!canvas_item->is_set_as_toplevel()) {
+					_find_canvas_items_in_rect(p_rect, p_node->get_child(i), r_items, p_parent_xform * canvas_item->get_transform(), p_canvas_xform);
+				} else {
+					_find_canvas_items_in_rect(p_rect, p_node->get_child(i), r_items, canvas_item->get_transform(), p_canvas_xform);
+				}
 			} else {
 				CanvasLayer *canvas_layer = Object::cast_to<CanvasLayer>(p_node);
 				_find_canvas_items_in_rect(p_rect, p_node->get_child(i), r_items, Transform2D(), canvas_layer ? canvas_layer->get_transform() : p_canvas_xform);
@@ -1905,11 +1913,7 @@ bool CanvasItemEditor::_gui_input_select(const Ref<InputEvent> &p_event) {
 				for (int i = 0; i < selection_results.size(); i++) {
 					CanvasItem *item = selection_results[i].item;
 
-					Ref<Texture> icon;
-					if (item->has_meta("_editor_icon"))
-						icon = item->get_meta("_editor_icon");
-					else
-						icon = get_icon(has_icon(item->get_class(), "EditorIcons") ? item->get_class() : String("Object"), "EditorIcons");
+					Ref<Texture> icon = EditorNode::get_singleton()->get_object_icon(item, "Node");
 					String node_path = "/" + root_name + "/" + root_path.rel_path_to(item->get_path());
 
 					selection_menu->add_item(item->get_name());
@@ -2046,10 +2050,7 @@ bool CanvasItemEditor::_gui_input_hover(const Ref<InputEvent> &p_event) {
 
 			_HoverResult hover_result;
 			hover_result.position = canvas_item->get_global_transform_with_canvas().get_origin();
-			if (has_icon(canvas_item->get_class(), "EditorIcons"))
-				hover_result.icon = get_icon(canvas_item->get_class(), "EditorIcons");
-			else
-				hover_result.icon = get_icon("Object", "EditorIcons");
+			hover_result.icon = EditorNode::get_singleton()->get_object_icon(canvas_item);
 			hover_result.name = canvas_item->get_name();
 
 			hovering_results_tmp.push_back(hover_result);
@@ -4397,7 +4398,7 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 	zoom_plus = memnew(ToolButton);
 	zoom_hb->add_child(zoom_plus);
 	zoom_plus->connect("pressed", this, "_button_zoom_plus");
-	zoom_plus->set_shortcut(ED_SHORTCUT("canvas_item_editor/zoom_plus", TTR("Zoom in"), KEY_MASK_CMD | KEY_PLUS));
+	zoom_plus->set_shortcut(ED_SHORTCUT("canvas_item_editor/zoom_plus", TTR("Zoom in"), KEY_MASK_CMD | KEY_EQUAL)); // Usually direct access key for PLUS
 	zoom_plus->set_focus_mode(FOCUS_NONE);
 
 	updating_scroll = false;
@@ -4419,19 +4420,19 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 	move_button->set_shortcut(ED_SHORTCUT("canvas_item_editor/move_mode", TTR("Move Mode"), KEY_W));
 	move_button->set_tooltip(TTR("Move Mode"));
 
-	scale_button = memnew(ToolButton);
-	hb->add_child(scale_button);
-	scale_button->set_toggle_mode(true);
-	scale_button->connect("pressed", this, "_button_tool_select", make_binds(TOOL_SCALE));
-	scale_button->set_shortcut(ED_SHORTCUT("canvas_item_editor/scale_mode", TTR("Scale Mode"), KEY_S));
-	scale_button->set_tooltip(TTR("Scale Mode"));
-
 	rotate_button = memnew(ToolButton);
 	hb->add_child(rotate_button);
 	rotate_button->set_toggle_mode(true);
 	rotate_button->connect("pressed", this, "_button_tool_select", make_binds(TOOL_ROTATE));
 	rotate_button->set_shortcut(ED_SHORTCUT("canvas_item_editor/rotate_mode", TTR("Rotate Mode"), KEY_E));
 	rotate_button->set_tooltip(TTR("Rotate Mode"));
+
+	scale_button = memnew(ToolButton);
+	hb->add_child(scale_button);
+	scale_button->set_toggle_mode(true);
+	scale_button->connect("pressed", this, "_button_tool_select", make_binds(TOOL_SCALE));
+	scale_button->set_shortcut(ED_SHORTCUT("canvas_item_editor/scale_mode", TTR("Scale Mode"), KEY_S));
+	scale_button->set_tooltip(TTR("Scale Mode"));
 
 	hb->add_child(memnew(VSeparator));
 
@@ -4924,7 +4925,6 @@ void CanvasItemEditorViewport::_perform_drop_data() {
 
 	// Without root dropping multiple files is not allowed
 	if (!target_node && selected_files.size() > 1) {
-		accept->get_ok()->set_text(TTR("Ok"));
 		accept->set_text(TTR("Cannot instantiate multiple nodes without root."));
 		accept->popup_centered_minsize();
 		return;
@@ -4986,7 +4986,6 @@ void CanvasItemEditorViewport::_perform_drop_data() {
 			files_str += error_files[i].get_file().get_basename() + ",";
 		}
 		files_str = files_str.substr(0, files_str.length() - 1);
-		accept->get_ok()->set_text(TTR("OK"));
 		accept->set_text(vformat(TTR("Error instancing scene from %s"), files_str.c_str()));
 		accept->popup_centered_minsize();
 	}

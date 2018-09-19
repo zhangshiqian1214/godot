@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  editor_initialize_ssl.h                                              */
+/*  noise_texture.h                                                      */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,9 +28,77 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef EDITOR_INITIALIZE_SSL_H
-#define EDITOR_INITIALIZE_SSL_H
+#ifndef NOISE_TEXTURE_H
+#define NOISE_TEXTURE_H
 
-void editor_initialize_certificates();
+#include "simplex_noise.h"
 
-#endif // EDITOR_INITIALIZE_SSL_H
+#include "core/image.h"
+#include "core/reference.h"
+#include "editor/editor_node.h"
+#include "editor/editor_plugin.h"
+#include "editor/property_editor.h"
+
+class NoiseTexture : public Texture {
+	GDCLASS(NoiseTexture, Texture)
+
+private:
+	Ref<Image> data;
+
+	Thread *noise_thread;
+
+	bool first_time;
+	bool update_queued;
+	bool regen_queued;
+
+	RID texture;
+	uint32_t flags;
+
+	Ref<SimplexNoise> noise;
+	Vector2i size;
+	bool seamless;
+	bool as_normalmap;
+
+	void _thread_done(const Ref<Image> &p_image);
+	static void _thread_function(void *p_ud);
+
+	void _queue_update();
+	Ref<Image> _generate_texture();
+	void _update_texture();
+	void _set_texture_data(const Ref<Image> &p_image);
+
+protected:
+	static void _bind_methods();
+
+public:
+	void set_noise(Ref<SimplexNoise> p_noise);
+	Ref<SimplexNoise> get_noise();
+
+	void set_width(int p_width);
+	void set_height(int p_hieght);
+
+	void set_seamless(bool p_seamless);
+	bool get_seamless();
+
+	void set_as_normalmap(bool p_seamless);
+	bool is_normalmap();
+
+	void set_size(Vector2 p_size);
+	Vector2 get_size();
+
+	int get_width() const;
+	int get_height() const;
+
+	virtual void set_flags(uint32_t p_flags);
+	virtual uint32_t get_flags() const;
+
+	virtual RID get_rid() const { return texture; }
+	virtual bool has_alpha() const { return false; }
+
+	virtual Ref<Image> get_data() const;
+
+	NoiseTexture();
+	virtual ~NoiseTexture();
+};
+
+#endif // NOISE_TEXTURE_H

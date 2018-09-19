@@ -2311,8 +2311,10 @@ void OS_Windows::set_custom_mouse_cursor(const RES &p_cursor, CursorShape p_shap
 
 		cursors[p_shape] = CreateIconIndirect(&iconinfo);
 
-		if (p_shape == CURSOR_ARROW) {
-			SetCursor(cursors[p_shape]);
+		if (p_shape == cursor_shape) {
+			if (mouse_mode == MOUSE_MODE_VISIBLE || mouse_mode == MOUSE_MODE_CONFINED) {
+				SetCursor(cursors[p_shape]);
+			}
 		}
 
 		if (hAndMask != NULL) {
@@ -2328,8 +2330,10 @@ void OS_Windows::set_custom_mouse_cursor(const RES &p_cursor, CursorShape p_shap
 	} else {
 		// Reset to default system cursor
 		cursors[p_shape] = NULL;
+
+		CursorShape c = cursor_shape;
 		cursor_shape = CURSOR_MAX;
-		set_cursor_shape(p_shape);
+		set_cursor_shape(c);
 	}
 }
 

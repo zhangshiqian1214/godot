@@ -73,6 +73,7 @@
 #include "editor/doc/doc_data.h"
 #include "editor/doc/doc_data_class_path.gen.h"
 #include "editor/editor_node.h"
+#include "editor/editor_settings.h"
 #include "editor/project_manager.h"
 #endif
 
@@ -756,7 +757,6 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	if (editor) {
 		packed_data->set_disabled(true);
 		globals->set_disable_feature_overrides(true);
-		StreamPeerSSL::initialize_certs = false; //will be initialized by editor
 	}
 
 #endif
@@ -1096,30 +1096,24 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 				ERR_PRINTS("Non-existing or invalid boot splash at: " + boot_logo_path + ". Loading default splash.");
 		}
 
+		Color boot_bg_color = GLOBAL_DEF("application/boot_splash/bg_color", boot_splash_bg_color);
 		if (boot_logo.is_valid()) {
 			OS::get_singleton()->_msec_splash = OS::get_singleton()->get_ticks_msec();
-			Color boot_bg = GLOBAL_DEF("application/boot_splash/bg_color", clear);
-			VisualServer::get_singleton()->set_boot_image(boot_logo, boot_bg, boot_logo_scale);
-#ifndef TOOLS_ENABLED
-//no tools, so free the boot logo (no longer needed)
-//ProjectSettings::get_singleton()->set("application/boot_logo",Image());
-#endif
+			VisualServer::get_singleton()->set_boot_image(boot_logo, boot_bg_color, boot_logo_scale);
 
 		} else {
 #ifndef NO_DEFAULT_BOOT_LOGO
-
 			MAIN_PRINT("Main: Create bootsplash");
 #if defined(TOOLS_ENABLED) && !defined(NO_EDITOR_SPLASH)
-
 			Ref<Image> splash = (editor || project_manager) ? memnew(Image(boot_splash_editor_png)) : memnew(Image(boot_splash_png));
 #else
 			Ref<Image> splash = memnew(Image(boot_splash_png));
 #endif
 
 			MAIN_PRINT("Main: ClearColor");
-			VisualServer::get_singleton()->set_default_clear_color(boot_splash_bg_color);
+			VisualServer::get_singleton()->set_default_clear_color(boot_bg_color);
 			MAIN_PRINT("Main: Image");
-			VisualServer::get_singleton()->set_boot_image(splash, boot_splash_bg_color, false);
+			VisualServer::get_singleton()->set_boot_image(splash, boot_bg_color, false);
 #endif
 		}
 
@@ -1601,6 +1595,7 @@ bool Main::start() {
 			sml->set_use_font_oversampling(font_oversampling);
 
 		} else {
+
 			GLOBAL_DEF("display/window/stretch/mode", "disabled");
 			ProjectSettings::get_singleton()->set_custom_property_info("display/window/stretch/mode", PropertyInfo(Variant::STRING, "display/window/stretch/mode", PROPERTY_HINT_ENUM, "disabled,2d,viewport"));
 			GLOBAL_DEF("display/window/stretch/aspect", "ignore");
@@ -1660,6 +1655,10 @@ bool Main::start() {
 		}
 
 		if (!project_manager && !editor) { // game
+
+			// Load SSL Certificates from Project Settings (or builtin)
+			StreamPeerSSL::load_certs_from_memory(StreamPeerSSL::get_project_cert_array());
+
 			if (game_path != "") {
 				Node *scene = NULL;
 				Ref<PackedScene> scenedata = ResourceLoader::load(local_game_path);
@@ -1691,6 +1690,15 @@ bool Main::start() {
 			pmanager->add_child(progress_dialog);
 			sml->get_root()->add_child(pmanager);
 			OS::get_singleton()->set_context(OS::CONTEXT_PROJECTMAN);
+		}
+
+		if (project_manager || editor) {
+			// Load SSL Certificates from Editor Settings (or builtin)
+			String certs = EditorSettings::get_singleton()->get_setting("network/ssl/editor_ssl_certificates").operator String();
+			if (certs != "")
+				StreamPeerSSL::load_certs_from_file(certs);
+			else
+				StreamPeerSSL::load_certs_from_memory(StreamPeerSSL::get_project_cert_array());
 		}
 #endif
 	}
